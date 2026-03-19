@@ -1,5 +1,5 @@
 /* ════════════════════════════════════════════════════════════════════
-   Kairozun Overlay — Glass Theme
+   Kairozun Overlay — Liquid Glass Theme
    ════════════════════════════════════════════════════════════════════ */
 
 * {
@@ -11,56 +11,78 @@
 body {
   background: transparent;
   overflow: hidden;
-  font-family: 'Segoe UI', 'Inter', sans-serif;
-  color: #fff;
+  font-family: 'Segoe UI', 'Inter', system-ui, sans-serif;
+  color: #e8eaed;
   user-select: none;
   -webkit-app-region: no-drag;
+  font-size: 12px;
 }
 
-/* ── Glass Panel ───────────────────────────────────────────────────── */
+/* ── Liquid Glass Panel ────────────────────────────────────────────── */
 
 .glass-panel {
   position: fixed;
-  background: rgba(20, 20, 30, 0.45);
-  backdrop-filter: blur(18px) saturate(1.4);
-  -webkit-backdrop-filter: blur(18px) saturate(1.4);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 14px;
-  padding: 12px 16px;
+  background:
+    linear-gradient(135deg,
+      rgba(255, 255, 255, 0.12) 0%,
+      rgba(255, 255, 255, 0.04) 40%,
+      rgba(255, 255, 255, 0.08) 100%),
+    rgba(18, 18, 32, 0.78);
+  backdrop-filter: blur(28px) saturate(1.6) brightness(1.1);
+  -webkit-backdrop-filter: blur(28px) saturate(1.6) brightness(1.1);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-top-color: rgba(255, 255, 255, 0.28);
+  border-left-color: rgba(255, 255, 255, 0.22);
+  border-radius: 12px;
+  padding: 8px 12px;
   box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.35),
-    inset 0 0 0 0.5px rgba(255, 255, 255, 0.08);
-  transition: opacity 0.3s ease, transform 0.3s ease;
+    0 4px 24px rgba(0, 0, 0, 0.4),
+    0 1px 3px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 0 20px rgba(255, 255, 255, 0.03);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+/* Liquid glass shimmer on top edge */
+.glass-panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent,
+    rgba(255, 255, 255, 0.35),
+    transparent);
+  border-radius: 1px;
 }
 
 /* ── Positions ─────────────────────────────────────────────────────── */
 
 .top-left {
-  top: 20px;
-  left: 20px;
-  min-width: 160px;
+  top: 14px;
+  left: 14px;
 }
 
 .top-right {
-  top: 20px;
-  right: 20px;
-  min-width: 220px;
-  max-width: 280px;
+  top: 14px;
+  right: 14px;
+  max-width: 220px;
 }
 
 .bottom-left {
-  bottom: 60px;
-  left: 20px;
-  min-width: 200px;
+  bottom: 46px;
+  left: 14px;
 }
 
 .bottom-center {
-  bottom: 14px;
+  bottom: 10px;
   left: 50%;
   transform: translateX(-50%);
-  padding: 6px 18px;
-  font-size: 11px;
-  opacity: 0.6;
+  padding: 4px 14px;
+  font-size: 10px;
+  opacity: 0.5;
 }
 
 /* ── Panel Rows ────────────────────────────────────────────────────── */
@@ -68,40 +90,46 @@ body {
 .panel-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 4px 0;
+  gap: 8px;
+  padding: 2px 0;
 }
 
 .label {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 1px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
   text-transform: uppercase;
-  opacity: 0.65;
-  min-width: 36px;
+  opacity: 0.5;
+  min-width: 28px;
 }
 
 .value {
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.3px;
 }
+
+/* Color-coded FPS */
+.value-good { color: #6ee7b7; }
+.value-warn { color: #fbbf24; }
+.value-bad  { color: #f87171; }
 
 /* ── Progress Bars ─────────────────────────────────────────────────── */
 
 .bar-wrap {
   flex: 1;
-  height: 6px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
   overflow: hidden;
 }
 
 .bar {
   height: 100%;
-  border-radius: 3px;
+  border-radius: 2px;
   background: linear-gradient(90deg, #6ee7b7, #3b82f6);
-  transition: width 0.5s ease;
+  transition: width 0.4s ease;
 }
 
 .bar-mem {
@@ -113,41 +141,55 @@ body {
 .panel-header {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  margin-bottom: 6px;
+  gap: 8px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  margin-bottom: 4px;
 }
 
 .avatar {
-  width: 28px;
-  height: 28px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   background: linear-gradient(135deg, #6366f1, #8b5cf6);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
+  font-size: 10px;
   font-weight: 700;
 }
 
 .username {
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 600;
+  opacity: 0.9;
 }
+
+/* ── Status indicator ──────────────────────────────────────────────── */
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #6ee7b7;
+  box-shadow: 0 0 6px rgba(110, 231, 183, 0.5);
+  margin-left: auto;
+}
+
+.status-dot.offline { background: #f87171; box-shadow: 0 0 6px rgba(248,113,113,0.5); }
 
 /* ── Kill Feed ─────────────────────────────────────────────────────── */
 
 .kill-feed {
-  max-height: 120px;
+  max-height: 80px;
   overflow: hidden;
 }
 
 .kill-entry {
-  font-size: 11px;
-  padding: 3px 0;
-  opacity: 0.8;
-  animation: fadeIn 0.3s ease;
+  font-size: 10px;
+  padding: 2px 0;
+  opacity: 0.75;
+  animation: fadeIn 0.25s ease;
 }
 
 .kill-entry .killer {
@@ -161,15 +203,15 @@ body {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-6px); }
-  to   { opacity: 0.8; transform: translateY(0); }
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 0.75; transform: translateY(0); }
 }
 
 /* ── Hint ──────────────────────────────────────────────────────────── */
 
 .hint {
-  font-size: 11px;
-  letter-spacing: 0.5px;
+  font-size: 10px;
+  letter-spacing: 0.3px;
 }
 
 /* ── Hidden utility ────────────────────────────────────────────────── */

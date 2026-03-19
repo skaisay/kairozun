@@ -1,5 +1,5 @@
 /* ════════════════════════════════════════════════════════════════════
-   Kairozun Overlay — Renderer Logic
+   Kairozun Overlay — Renderer Logic (Real Roblox Data)
    ════════════════════════════════════════════════════════════════════ */
 
 // ── i18n ─────────────────────────────────────────────────────────────
@@ -27,8 +27,18 @@ function applyLang(lang) {
   });
 }
 
-// ── FPS Counter ──────────────────────────────────────────────────────
+// ── Elements ─────────────────────────────────────────────────────────
 const fpsEl = document.getElementById('fps-value');
+const pingEl = document.getElementById('ping-value');
+const cpuBar = document.getElementById('cpu-bar');
+const cpuValue = document.getElementById('cpu-value');
+const memBar = document.getElementById('mem-bar');
+const memValue = document.getElementById('mem-value');
+const statusDot = document.getElementById('roblox-status');
+const killFeed = document.getElementById('kill-feed');
+
+// ── FPS counter (overlay's own framerate as fallback) ────────────────
+let overlayFps = 0;
 let frames = 0;
 let lastFpsTime = performance.now();
 
@@ -36,7 +46,7 @@ function fpsLoop() {
   frames++;
   const now = performance.now();
   if (now - lastFpsTime >= 1000) {
-    fpsEl.textContent = frames;
+    overlayFps = frames;
     frames = 0;
     lastFpsTime = now;
   }
@@ -44,24 +54,48 @@ function fpsLoop() {
 }
 requestAnimationFrame(fpsLoop);
 
-// ── Simulated Ping ───────────────────────────────────────────────────
-const pingEl = document.getElementById('ping-value');
-
-function updatePing() {
-  // In a real integration this would measure actual latency.
-  // For the overlay demo we simulate a value.
-  const ping = Math.floor(30 + Math.random() * 40);
-  pingEl.textContent = ping + ' ms';
+// ── FPS color coding ─────────────────────────────────────────────────
+function setFpsColor(el, fps) {
+  el.classList.remove('value-good', 'value-warn', 'value-bad');
+  if (fps >= 45) el.classList.add('value-good');
+  else if (fps >= 25) el.classList.add('value-warn');
+  else el.classList.add('value-bad');
 }
-setInterval(updatePing, 2000);
-updatePing();
+
+// ── Roblox real data ─────────────────────────────────────────────────
+let robloxConnected = false;
+let lastRobloxFps = null;
+let lastRobloxPing = null;
+
+window.kairozun.onRobloxData((data) => {
+  robloxConnected = data.running;
+  statusDot.classList.toggle('offline', !data.running);
+  statusDot.title = data.running ? 'Roblox: Online' : 'Roblox: Offline';
+
+  if (data.fps != null) {
+    lastRobloxFps = data.fps;
+    fpsEl.textContent = data.fps;
+    setFpsColor(fpsEl, data.fps);
+  }
+
+  if (data.ping != null) {
+    lastRobloxPing = data.ping;
+    pingEl.textContent = data.ping + ' ms';
+  }
+});
+
+// Fallback: if no Roblox data, show overlay FPS
+setInterval(() => {
+  if (!robloxConnected || lastRobloxFps == null) {
+    fpsEl.textContent = overlayFps;
+    setFpsColor(fpsEl, overlayFps);
+  }
+  if (!robloxConnected || lastRobloxPing == null) {
+    pingEl.textContent = '--';
+  }
+}, 1000);
 
 // ── System Metrics (from main process) ───────────────────────────────
-const cpuBar = document.getElementById('cpu-bar');
-const cpuValue = document.getElementById('cpu-value');
-const memBar = document.getElementById('mem-bar');
-const memValue = document.getElementById('mem-value');
-
 window.kairozun.onSystemMetrics(({ cpu, mem }) => {
   cpuBar.style.width = cpu + '%';
   cpuValue.textContent = cpu + '%';
@@ -69,15 +103,13 @@ window.kairozun.onSystemMetrics(({ cpu, mem }) => {
   memValue.textContent = mem + '%';
 });
 
-// ── Kill Feed (demo) ─────────────────────────────────────────────────
-const killFeed = document.getElementById('kill-feed');
-const demoNames = ['xShadow', 'NoobSlayer', 'ProGamer42', 'BloxKing', 'NightWolf', 'StarBlitz', 'Kairozun'];
-const MAX_KILLS = 5;
+// ── Kill Feed ────────────────────────────────────────────────────────
+const MAX_KILLS = 4;
 
 function addKillEntry(killer, victim) {
   const entry = document.createElement('div');
   entry.className = 'kill-entry';
-  entry.innerHTML = `<span class="killer">${escapeHtml(killer)}</span> ⟶ <span class="victim">${escapeHtml(victim)}</span>`;
+  entry.innerHTML = `<span class="killer">${escapeHtml(killer)}</span> → <span class="victim">${escapeHtml(victim)}</span>`;
   killFeed.prepend(entry);
   while (killFeed.children.length > MAX_KILLS) {
     killFeed.removeChild(killFeed.lastChild);
@@ -89,14 +121,6 @@ function escapeHtml(str) {
   div.textContent = str;
   return div.innerHTML;
 }
-
-// Demo kill feed — remove in production
-setInterval(() => {
-  const k = demoNames[Math.floor(Math.random() * demoNames.length)];
-  let v = demoNames[Math.floor(Math.random() * demoNames.length)];
-  if (v === k) v = demoNames[(demoNames.indexOf(k) + 1) % demoNames.length];
-  addKillEntry(k, v);
-}, 4000);
 
 // ── Settings bridge ──────────────────────────────────────────────────
 window.kairozun.onApplySettings((settings) => {
@@ -115,6 +139,7 @@ window.kairozun.onApplySettings((settings) => {
   }
   if (settings.username) {
     document.getElementById('username').textContent = settings.username;
+    document.getElementById('avatar-letter').textContent = settings.username.charAt(0).toUpperCase();
   }
 });
 

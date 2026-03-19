@@ -1,12 +1,95 @@
 const { app, BrowserWindow, ipcMain, screen, globalShortcut, Tray, Menu } = require('electron');
 const path = require('path');
 const os = require('os');
+const fs = require('fs');
 
 const ICON_PATH = path.join(__dirname, '..', 'assets', 'icon.ico');
 
 let overlayWindow = null;
 let settingsWindow = null;
 let tray = null;
+
+// ── Roblox log reader ───────────────────────────────────────────────
+const ROBLOX_LOG_DIR = path.join(os.homedir(), 'AppData', 'Local', 'Roblox', 'logs');
+
+let lastLogFile = null;
+let lastLogSize = 0;
+let robloxRunning = false;
+let robloxInterval = null;
+
+function findLatestRobloxLog() {
+  try {
+    if (!fs.existsSync(ROBLOX_LOG_DIR)) return null;
+    const files = fs.readdirSync(ROBLOX_LOG_DIR)
+      .filter(f => f.endsWith('.log'))
+      .map(f => ({ name: f, mtime: fs.statSync(path.join(ROBLOX_LOG_DIR, f)).mtimeMs }))
+      .sort((a, b) => b.mtime - a.mtime);
+    return files.length > 0 ? path.join(ROBLOX_LOG_DIR, files[0].name) : null;
+  } catch { return null; }
+}
+
+function parseRobloxLog(text) {
+  const data = {};
+
+  // FPS: look for "VideoMemoryBudgetKB" or "FPS" patterns
+  const fpsMatch = text.match(/FLog::Graphics.*?(\d+(?:\.\d+)?)\s*fps/i)
+    || text.match(/framerate\D+(\d+(?:\.\d+)?)/i)
+    || text.match(/Fps:\s*(\d+(?:\.\d+)?)/i);
+  if (fpsMatch) data.fps = Math.round(parseFloat(fpsMatch[1]));
+
+  // Ping / latency
+  const pingMatch = text.match(/averagePing[":=\s]+(\d+(?:\.\d+)?)/i)
+    || text.match(/ping[":=\s]+(\d+(?:\.\d+)?)\s*ms/i)
+    || text.match(/MachineAddress.*?(\d+(?:\.\d+)?)\s*ms/i)
+    || text.match(/latency[":=\s]+(\d+(?:\.\d+)?)/i);
+  if (pingMatch) data.ping = Math.round(parseFloat(pingMatch[1]));
+
+  return data;
+}
+
+function isRobloxRunning() {
+  try {
+    const { execSync } = require('child_process');
+    const result = execSync('tasklist /FI "IMAGENAME eq RobloxPlayerBeta.exe" /FO CSV /NH', {
+      encoding: 'utf8',
+      windowsHide: true,
+      timeout: 3000,
+    });
+    return result.includes('RobloxPlayerBeta');
+  } catch { return false; }
+}
+
+function startRobloxWatcher() {
+  robloxInterval = setInterval(() => {
+    robloxRunning = isRobloxRunning();
+
+    const robloxData = { running: robloxRunning };
+
+    if (robloxRunning) {
+      const logFile = findLatestRobloxLog();
+      if (logFile) {
+        try {
+          const stat = fs.statSync(logFile);
+          // Read only new data (tail)
+          const readStart = Math.max(0, stat.size - 8192);
+          const fd = fs.openSync(logFile, 'r');
+          const buf = Buffer.alloc(stat.size - readStart);
+          fs.readSync(fd, buf, 0, buf.length, readStart);
+          fs.closeSync(fd);
+          const chunk = buf.toString('utf8');
+          Object.assign(robloxData, parseRobloxLog(chunk));
+        } catch { /* ignore read errors */ }
+      }
+    }
+
+    // Send to windows
+    const send = (win) => {
+      if (win && !win.isDestroyed()) win.webContents.send('roblox-data', robloxData);
+    };
+    send(overlayWindow);
+    send(settingsWindow);
+  }, 2000);
+}
 
 function createOverlay() {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize;
@@ -115,6 +198,7 @@ ipcMain.on('minimize-settings', () => {
 app.whenReady().then(() => {
   createOverlay();
   startSystemMetrics();
+  startRobloxWatcher();
 
   // Tray icon
   tray = new Tray(ICON_PATH);
@@ -151,6 +235,7 @@ app.whenReady().then(() => {
 app.on('will-quit', () => {
   globalShortcut.unregisterAll();
   if (systemInterval) clearInterval(systemInterval);
+  if (robloxInterval) clearInterval(robloxInterval);
 });
 
 app.on('window-all-closed', (e) => {
