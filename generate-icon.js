@@ -3,7 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const SIZE = 64;
+const SIZE = 256;
 const pixels = Buffer.alloc(SIZE * SIZE * 4);
 
 // Draw a gradient background + "K" shape
@@ -74,9 +74,9 @@ ico.writeUInt16LE(0, 0);        // Reserved
 ico.writeUInt16LE(1, 2);        // Type = ICO
 ico.writeUInt16LE(1, 4);        // Count = 1
 
-// ICONDIRENTRY
-ico.writeUInt8(SIZE, 6);        // Width
-ico.writeUInt8(SIZE, 7);        // Height
+// ICONDIRENTRY (256 is stored as 0 in ICO format)
+ico.writeUInt8(SIZE === 256 ? 0 : SIZE, 6);  // Width
+ico.writeUInt8(SIZE === 256 ? 0 : SIZE, 7);  // Height
 ico.writeUInt8(0, 8);           // Color palette
 ico.writeUInt8(0, 9);           // Reserved
 ico.writeUInt16LE(1, 10);       // Color planes

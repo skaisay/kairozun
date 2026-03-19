@@ -22,10 +22,11 @@
       "icon": "assets/icon.ico",
       "target": [
         {
-          "target": "nsis",
+          "target": "portable",
           "arch": ["x64"]
         }
-      ]
+      ],
+      "signAndEditExecutable": false
     },
     "nsis": {
       "oneClick": true,
