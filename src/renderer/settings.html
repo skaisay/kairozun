@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kairozun Settings</title>
+  <link rel="stylesheet" href="settings.css">
+</head>
+<body>
+  <div class="glass-window">
+    <!-- ═══ Custom Title Bar ═══ -->
+    <div class="titlebar">
+      <span class="titlebar-text">KAIROZUN</span>
+      <div class="titlebar-controls">
+        <button class="btn-ctrl btn-min" id="btn-min">&#x2013;</button>
+        <button class="btn-ctrl btn-close" id="btn-close">&#x2715;</button>
+      </div>
+    </div>
+
+    <!-- ═══ Content ═══ -->
+    <div class="content">
+      <h2 data-i18n="settingsTitle">Settings</h2>
+
+      <!-- Language -->
+      <div class="section">
+        <label data-i18n="language">Language</label>
+        <div class="toggle-group">
+          <button class="lang-btn active" data-lang="en">EN</button>
+          <button class="lang-btn" data-lang="ru">RU</button>
+        </div>
+      </div>
+
+      <!-- Toggles -->
+      <div class="section">
+        <label data-i18n="widgets">Widgets</label>
+        <div class="toggle-row">
+          <span data-i18n="showFps">Show FPS</span>
+          <input type="checkbox" id="chk-fps" checked>
+        </div>
+        <div class="toggle-row">
+          <span data-i18n="showPing">Show Ping</span>
+          <input type="checkbox" id="chk-ping" checked>
+        </div>
+        <div class="toggle-row">
+          <span data-i18n="showKillFeed">Show Kill Feed</span>
+          <input type="checkbox" id="chk-killfeed" checked>
+        </div>
+        <div class="toggle-row">
+          <span data-i18n="showSystem">Show System Load</span>
+          <input type="checkbox" id="chk-system" checked>
+        </div>
+      </div>
+
+      <!-- Username -->
+      <div class="section">
+        <label data-i18n="usernameLabel">Username</label>
+        <input type="text" id="input-username" class="text-input" placeholder="Kairozun" maxlength="20">
+      </div>
+
+      <!-- System monitor preview -->
+      <div class="section">
+        <label data-i18n="systemMonitor">System Monitor</label>
+        <div class="sys-row">
+          <span>CPU</span>
+          <div class="bar-wrap"><div class="bar" id="cpu-bar" style="width:0%"></div></div>
+          <span id="cpu-value">0%</span>
+        </div>
+        <div class="sys-row">
+          <span>RAM</span>
+          <div class="bar-wrap"><div class="bar bar-mem" id="mem-bar" style="width:0%"></div></div>
+          <span id="mem-value">0%</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="settings.js"></script>
+</body>
+</html>

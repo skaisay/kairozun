@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kairozun Overlay</title>
+  <link rel="stylesheet" href="overlay.css">
+</head>
+<body>
+
+  <!-- ═══ TOP-LEFT: FPS & Ping ═══ -->
+  <div id="panel-tl" class="glass-panel top-left">
+    <div class="panel-row" id="fps-row">
+      <span class="label" data-i18n="fps">FPS</span>
+      <span class="value" id="fps-value">--</span>
+    </div>
+    <div class="panel-row" id="ping-row">
+      <span class="label" data-i18n="ping">PING</span>
+      <span class="value" id="ping-value">-- ms</span>
+    </div>
+  </div>
+
+  <!-- ═══ TOP-RIGHT: Account / Kill Feed ═══ -->
+  <div id="panel-tr" class="glass-panel top-right">
+    <div class="panel-header">
+      <span class="avatar">K</span>
+      <span class="username" id="username">Kairozun</span>
+    </div>
+    <div class="kill-feed" id="kill-feed">
+      <!-- dynamic kill entries -->
+    </div>
+  </div>
+
+  <!-- ═══ BOTTOM-LEFT: System Load ═══ -->
+  <div id="panel-bl" class="glass-panel bottom-left">
+    <div class="panel-row">
+      <span class="label">CPU</span>
+      <div class="bar-wrap"><div class="bar" id="cpu-bar" style="width:0%"></div></div>
+      <span class="value" id="cpu-value">0%</span>
+    </div>
+    <div class="panel-row">
+      <span class="label">RAM</span>
+      <div class="bar-wrap"><div class="bar bar-mem" id="mem-bar" style="width:0%"></div></div>
+      <span class="value" id="mem-value">0%</span>
+    </div>
+  </div>
+
+  <!-- ═══ BOTTOM-CENTER: Hint ═══ -->
+  <div id="panel-bc" class="glass-panel bottom-center">
+    <span class="hint" data-i18n="hint">Alt+8 — Settings  |  Ctrl+Shift+H — Hide</span>
+  </div>
+
+  <script src="overlay.js"></script>
+</body>
+</html>
