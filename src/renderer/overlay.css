@@ -37,6 +37,7 @@ body {
   border-top-color: rgba(255, 255, 255, 0.16);
   border-left-color: rgba(255, 255, 255, 0.12);
   border-radius: 14px;
+  overflow: hidden;
   padding: 8px 12px;
   box-shadow:
     0 8px 32px rgba(0, 0, 0, 0.50),
@@ -44,8 +45,9 @@ body {
     inset 0 1px 0 rgba(255, 255, 255, 0.10),
     inset 0 -1px 0 rgba(255, 255, 255, 0.02),
     inset 0 0 40px rgba(255, 255, 255, 0.02);
-  transition: box-shadow 0.2s ease, opacity 0.35s ease, transform 0.35s ease, background 0.3s ease;
+  transition: box-shadow 0.2s ease, opacity 0.3s ease, transform 0.3s ease, background 0.3s ease;
   will-change: transform, opacity;
+  contain: layout style;
 }
 
 .glass-panel.panel-hidden {
@@ -343,6 +345,12 @@ body {
 .value-warn { color: #fbbf24; }
 .value-bad  { color: #f87171; }
 
+#fps-srv-part {
+  font-weight: 500;
+  opacity: 0.7;
+  margin-left: 0;
+}
+
 /* ── Progress Bars ─────────────────────────────────────────────────── */
 
 .bar-wrap {
@@ -357,7 +365,8 @@ body {
   height: 100%;
   border-radius: 2px;
   background: linear-gradient(90deg, #6ee7b7, #3b82f6);
-  transition: width 0.4s ease;
+  transition: width 0.3s ease;
+  will-change: width;
 }
 
 .bar-mem {
@@ -490,7 +499,7 @@ body {
   overflow: hidden;
   max-height: 30px;
   opacity: 1;
-  transition: max-height 0.35s ease, opacity 0.25s ease, padding 0.35s ease, margin 0.35s ease;
+  transition: max-height 0.25s ease, opacity 0.2s ease, padding 0.25s ease, margin 0.25s ease;
 }
 
 .panel-row.hidden {

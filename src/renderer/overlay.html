@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="referrer" content="no-referrer">
   <title>Kairozun Overlay</title>
   <link rel="stylesheet" href="overlay.css">
 </head>
@@ -12,7 +13,7 @@
   <div id="panel-tl" class="glass-panel top-left">
     <div class="panel-row" id="fps-row">
       <span class="label" data-i18n="fps">FPS</span>
-      <span class="value" id="fps-value">--</span>
+      <span class="value" id="fps-value">--</span><span class="value hidden" id="fps-srv-part"></span>
     </div>
     <div class="panel-row" id="ping-row">
       <span class="label" data-i18n="ping">PING</span>

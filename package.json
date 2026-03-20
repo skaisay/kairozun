@@ -1,6 +1,6 @@
 {
   "name": "kairozun",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Kairozun — Roblox glass overlay",
   "main": "src/main.js",
   "scripts": {
@@ -22,7 +22,7 @@
       "icon": "assets/icon.ico",
       "target": [
         {
-          "target": "portable",
+          "target": "nsis",
           "arch": ["x64"]
         }
       ],
@@ -32,10 +32,13 @@
       "oneClick": true,
       "perMachine": false,
       "allowToChangeInstallationDirectory": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
       "installerIcon": "assets/icon.ico",
       "uninstallerIcon": "assets/icon.ico",
       "installerHeaderIcon": "assets/icon.ico",
-      "shortcutName": "Kairozun"
+      "shortcutName": "Kairozun",
+      "runAfterFinish": true
     }
   },
   "keywords": [

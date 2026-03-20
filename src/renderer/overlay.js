@@ -76,6 +76,30 @@ const gameIcon = document.getElementById('game-icon');
 const serverIpEl = document.getElementById('server-ip');
 const visitsValue = document.getElementById('visits-value');
 
+// Cache last known good avatar URL to prevent flickering/disappearing
+let cachedAvatarUrl = null;
+
+// Avatar error handler — fallback to letter on load failure, retry from cache
+avatarImg.addEventListener('error', () => {
+  // Don't hide avatar if we have a cached URL and it's different from current
+  if (cachedAvatarUrl && avatarImg.src !== cachedAvatarUrl) {
+    avatarImg.src = cachedAvatarUrl;
+  } else {
+    avatarImg.classList.add('hidden');
+    avatarLetter.classList.remove('hidden');
+  }
+});
+avatarImg.addEventListener('load', () => {
+  cachedAvatarUrl = avatarImg.src;
+  avatarImg.classList.remove('hidden');
+  avatarLetter.classList.add('hidden');
+});
+
+// Game icon error handler
+gameIcon.addEventListener('error', () => {
+  gameIcon.classList.add('hidden');
+});
+
 // ── FPS counter (overlay's own framerate as fallback) ────────────────
 let overlayFps = 0;
 let frames = 0;
@@ -136,6 +160,11 @@ window.kairozun.onRobloxData((data) => {
     lastRobloxFps = data.fps;
     fpsEl.textContent = data.fps;
     setFpsColor(fpsEl, data.fps);
+    // Update combined display if server FPS is already known
+    const srvPart = document.getElementById('fps-srv-part');
+    if (srvPart && !srvPart.classList.contains('hidden')) {
+      srvPart.textContent = ' — ' + (srvPart.dataset.srvFps || '--') + ' srv';
+    }
   }
 
   if (data.ping != null) {
@@ -151,11 +180,15 @@ window.kairozun.onRobloxData((data) => {
     avatarLetter.textContent = display.charAt(0).toUpperCase();
   }
 
-  // Avatar from Roblox API
-  if (data.avatarUrl && avatarImg.src !== data.avatarUrl) {
-    avatarImg.src = data.avatarUrl;
-    avatarImg.classList.remove('hidden');
-    avatarLetter.classList.add('hidden');
+  // Avatar from Roblox API — use cached URL as fallback
+  if (data.avatarUrl) {
+    if (avatarImg.src !== data.avatarUrl) {
+      avatarImg.src = data.avatarUrl;
+      // load/error events handle visibility
+    }
+  } else if (cachedAvatarUrl && avatarImg.classList.contains('hidden')) {
+    // Restore from cache if API didn't return avatar this cycle
+    avatarImg.src = cachedAvatarUrl;
   }
 
   // Friends count
@@ -215,10 +248,17 @@ window.kairozun.onRobloxData((data) => {
     document.getElementById('online-value').textContent = formatNumber(data.gamePlaying) + ' online';
     document.getElementById('online-row').classList.remove('hidden');
   }
-  // Server FPS
+  // Server FPS — show in game info panel and inline in FPS widget
   if (data.serverFps != null) {
     document.getElementById('server-fps-value').textContent = data.serverFps + ' srv fps';
     document.getElementById('server-fps-row').classList.remove('hidden');
+    // Show inline in top-left FPS row: "120 — 60 srv"
+    const srvPart = document.getElementById('fps-srv-part');
+    if (srvPart) {
+      srvPart.dataset.srvFps = data.serverFps;
+      srvPart.textContent = ' — ' + data.serverFps + ' srv';
+      srvPart.classList.remove('hidden');
+    }
   }
   if (data.serverIp) {
     serverIpEl.textContent = data.serverIp;
@@ -269,12 +309,9 @@ window.kairozun.onRobloxData((data) => {
     document.getElementById('servers-row').classList.remove('hidden');
   }
 
-  // Player list (names + avatars from serverPlayerList, or fallback to anonymous avatars)
+  // Player list (names + avatars from serverPlayerList)
   if (data.serverPlayerList && data.serverPlayerList.length > 0) {
     renderPlayerList(data.serverPlayerList, data.serverPlayerCount || data.serverPlayerList.length);
-    if (widgetToggles.showPlayerList) document.getElementById('panel-ml').classList.remove('panel-hidden');
-  } else if (data.playerAvatars && data.playerAvatars.length > 0) {
-    renderPlayerAvatarsAnon(data.playerAvatars, data.serverPlayerCount || data.playerAvatars.length);
     if (widgetToggles.showPlayerList) document.getElementById('panel-ml').classList.remove('panel-hidden');
   } else if (data.serverPlayerCount > 0 && widgetToggles.showPlayerList) {
     document.getElementById('player-list-count').textContent = data.serverPlayerCount;
@@ -297,6 +334,8 @@ window.kairozun.onRobloxData((data) => {
     document.getElementById('servers-row').classList.add('hidden');
     document.getElementById('online-row').classList.add('hidden');
     document.getElementById('server-fps-row').classList.add('hidden');
+    const srvPart = document.getElementById('fps-srv-part');
+    if (srvPart) { srvPart.classList.add('hidden'); srvPart.textContent = ''; }
     document.getElementById('region-row').classList.add('hidden');
     document.getElementById('uptime-row').classList.add('hidden');
     document.getElementById('followers-row').classList.add('hidden');
@@ -305,7 +344,8 @@ window.kairozun.onRobloxData((data) => {
     document.getElementById('player-avatar-grid').innerHTML = '';
     gameIcon.classList.add('hidden');
     friendsValue.textContent = '--';
-    if (!avatarImg.classList.contains('hidden')) {
+    // Only hide avatar if truly offline (no cached URL)
+    if (!avatarImg.classList.contains('hidden') && !cachedAvatarUrl) {
       avatarImg.classList.add('hidden');
       avatarLetter.classList.remove('hidden');
     }
@@ -375,7 +415,9 @@ function renderPlayerList(players, totalCount) {
       img.src = p.avatarUrl;
       img.alt = '';
       img.loading = 'lazy';
+      img.referrerPolicy = 'no-referrer';
       img.className = 'player-row-avatar';
+      img.onerror = () => { img.style.display = 'none'; };
       item.appendChild(img);
     } else {
       const letter = document.createElement('div');
@@ -432,6 +474,8 @@ function renderPlayerAvatarsAnon(avatars, totalCount) {
     img.src = url;
     img.alt = '';
     img.loading = 'lazy';
+    img.referrerPolicy = 'no-referrer';
+    img.onerror = () => { img.style.display = 'none'; };
     item.appendChild(img);
     frag.appendChild(item);
   }
@@ -463,6 +507,8 @@ const POSITION_KEY = 'kairozun_panel_positions';
 let isDragging = false;
 let dragPanel = null;
 let startX, startY, origX, origY;
+let dragRafId = null;
+let dragTargetX = 0, dragTargetY = 0;
 
 // Store scale per panel
 const panelScales = {};
@@ -529,39 +575,49 @@ document.querySelectorAll('.glass-panel').forEach((panel) => {
     panel.classList.add('dragging');
     panel.style.cursor = 'grabbing';
 
-    const rect = panel.getBoundingClientRect();
-    const scale = getPanelScale(panel);
-    origX = parseFloat(panel.style.left) || rect.left;
-    origY = parseFloat(panel.style.top) || rect.top;
+    // Use offsetLeft/offsetTop (unaffected by CSS transforms) for accurate position
+    const parsedLeft = parseFloat(panel.style.left);
+    const parsedTop = parseFloat(panel.style.top);
+    origX = isNaN(parsedLeft) ? panel.offsetLeft : parsedLeft;
+    origY = isNaN(parsedTop) ? panel.offsetTop : parsedTop;
     startX = e.clientX;
     startY = e.clientY;
-    // Remove transform:scale during drag so position is accurate
-    panel.style.transform = 'none';
+    // Disable backdrop-filter during drag to eliminate GPU stutter
+    panel.style.backdropFilter = 'none';
+    panel.style.webkitBackdropFilter = 'none';
+    // Keep transform:scale during drag — removing it causes visual zoom jumps
+    panel.style.transition = 'none';
     e.preventDefault();
   });
 });
 
 document.addEventListener('mousemove', (e) => {
   if (!isDragging || !dragPanel) return;
-  const dx = e.clientX - startX;
-  const dy = e.clientY - startY;
-  dragPanel.style.top = (origY + dy) + 'px';
-  dragPanel.style.left = (origX + dx) + 'px';
-  dragPanel.style.right = 'auto';
-  dragPanel.style.bottom = 'auto';
-  dragPanel.style.transform = 'none';
+  dragTargetX = origX + (e.clientX - startX);
+  dragTargetY = origY + (e.clientY - startY);
+  // Use rAF to batch position updates at display refresh rate
+  if (!dragRafId) {
+    dragRafId = requestAnimationFrame(() => {
+      if (dragPanel) {
+        dragPanel.style.top = dragTargetY + 'px';
+        dragPanel.style.left = dragTargetX + 'px';
+        dragPanel.style.right = 'auto';
+        dragPanel.style.bottom = 'auto';
+      }
+      dragRafId = null;
+    });
+  }
 });
 
-document.addEventListener('mouseup', () => {
+document.addEventListener('mouseup', (e) => {
   if (!isDragging || !dragPanel) return;
+  if (dragRafId) { cancelAnimationFrame(dragRafId); dragRafId = null; }
   dragPanel.classList.remove('dragging');
   dragPanel.style.cursor = 'grab';
-  // Restore scale transform after drag
-  const panelScale = getPanelScale(dragPanel);
-  if (panelScale !== 1) {
-    dragPanel.style.transform = 'scale(' + panelScale + ')';
-    dragPanel.style.transformOrigin = panelScaleOrigin(dragPanel.id);
-  }
+  // Restore backdrop-filter and transition
+  dragPanel.style.backdropFilter = '';
+  dragPanel.style.webkitBackdropFilter = '';
+  dragPanel.style.transition = '';
 
   const positions = loadPositions();
   positions[dragPanel.id] = {
@@ -570,12 +626,18 @@ document.addEventListener('mouseup', () => {
   };
   savePositions(positions);
 
+  // Check if mouse is still over the panel — if so, keep mouse capture
+  // to allow immediate re-drag without needing to re-enter the panel
+  const rect = dragPanel.getBoundingClientRect();
+  const overPanel = e.clientX >= rect.left && e.clientX <= rect.right &&
+                    e.clientY >= rect.top && e.clientY <= rect.bottom;
+
   isDragging = false;
   dragPanel = null;
 
-  setTimeout(() => {
+  if (!overPanel) {
     window.kairozun.setOverlayMouse(true);
-  }, 100);
+  }
 });
 
 restorePositions();
@@ -603,43 +665,41 @@ window.kairozun.onApplySettings((settings) => {
   }
   if (settings.showGame !== undefined) {
     widgetToggles.showGame = settings.showGame;
-    if (!settings.showGame) {
-      document.getElementById('game-row').classList.add('hidden');
-      document.getElementById('creator-row').classList.add('hidden');
-    }
+    document.getElementById('game-row').classList.toggle('hidden', !settings.showGame);
+    document.getElementById('creator-row').classList.toggle('hidden', !settings.showGame);
   }
   if (settings.showPlayers !== undefined) {
     widgetToggles.showPlayers = settings.showPlayers;
-    if (!settings.showPlayers) document.getElementById('players-row').classList.add('hidden');
+    document.getElementById('players-row').classList.toggle('hidden', !settings.showPlayers);
   }
   if (settings.showServer !== undefined) {
     widgetToggles.showServer = settings.showServer;
-    if (!settings.showServer) document.getElementById('server-row').classList.add('hidden');
+    document.getElementById('server-row').classList.toggle('hidden', !settings.showServer);
   }
   if (settings.showVisits !== undefined) {
     widgetToggles.showVisits = settings.showVisits;
-    if (!settings.showVisits) document.getElementById('visits-row').classList.add('hidden');
+    document.getElementById('visits-row').classList.toggle('hidden', !settings.showVisits);
   }
   if (settings.showFavorites !== undefined) {
     widgetToggles.showFavorites = settings.showFavorites;
     const favsRow = document.getElementById('favs-row');
-    if (favsRow && !settings.showFavorites) favsRow.classList.add('hidden');
+    if (favsRow) favsRow.classList.toggle('hidden', !settings.showFavorites);
   }
   if (settings.showGenre !== undefined) {
     widgetToggles.showGenre = settings.showGenre;
-    if (!settings.showGenre) document.getElementById('genre-row').classList.add('hidden');
+    document.getElementById('genre-row').classList.toggle('hidden', !settings.showGenre);
   }
   if (settings.showRating !== undefined) {
     widgetToggles.showRating = settings.showRating;
-    if (!settings.showRating) document.getElementById('rating-row').classList.add('hidden');
+    document.getElementById('rating-row').classList.toggle('hidden', !settings.showRating);
   }
   if (settings.showRegion !== undefined) {
     widgetToggles.showRegion = settings.showRegion;
-    if (!settings.showRegion) document.getElementById('region-row').classList.add('hidden');
+    document.getElementById('region-row').classList.toggle('hidden', !settings.showRegion);
   }
   if (settings.showUptime !== undefined) {
     widgetToggles.showUptime = settings.showUptime;
-    if (!settings.showUptime) document.getElementById('uptime-row').classList.add('hidden');
+    document.getElementById('uptime-row').classList.toggle('hidden', !settings.showUptime);
   }
   if (settings.showPlayerList !== undefined) {
     widgetToggles.showPlayerList = settings.showPlayerList;

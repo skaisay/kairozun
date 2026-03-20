@@ -33,9 +33,25 @@ const i18n = {
     showClock: 'Show Clock',
     usernameLabel: 'Username',
     systemMonitor: 'System Monitor',
+    sysHardware: 'Hardware',
+    sysCpuModel: 'CPU',
+    sysCores: 'Cores',
+    sysGpu: 'GPU',
+    sysMemory: 'Memory',
+    sysTotal: 'Total',
+    sysUsed: 'Used',
+    sysFree: 'Free',
+    sysAppMem: 'App Memory',
+    sysDisk: 'Disk',
+    sysNetwork: 'Network',
+    sysInfo: 'System Info',
+    sysHostname: 'Host',
+    sysUptime: 'Uptime',
     hotkeys: 'Hotkeys',
     hotkeySettings: 'Open / Close Settings',
     hotkeyOverlay: 'Show / Hide Overlay',
+    captureSettings: 'Screen Capture',
+    showOnCapture: 'Show on screen recording',
     accountInfo: 'Account',
     currentGame: 'Current Game',
     serverInfo: 'Server',
@@ -77,6 +93,21 @@ const i18n = {
     historyDuration: 'Duration',
     historyRegion: 'Region',
     historyServer: 'Server',
+    complianceTitle: 'Compliance & Safety',
+    complianceText: 'Kairozun is a safe external overlay that does not violate Roblox Terms of Use. The application does not inject code into Roblox, does not modify game memory, does not automate gameplay, and does not provide unfair advantages. It only reads publicly available log files and uses official Roblox public APIs.',
+    complianceNoInject: 'Does not inject code or modify Roblox',
+    compliancePublicApi: 'Uses only official public Roblox APIs',
+    complianceNoCheat: 'Does not automate gameplay or provide cheats',
+    complianceExternal: 'Runs externally — does not touch game process',
+    complianceNoAuth: 'Does not require or store Roblox credentials',
+    linkRobloxTos: 'Roblox Terms of Use',
+    linkCommunityStandards: 'Community Standards',
+    statusInGame: 'In Game',
+    statusOnline: 'Online',
+    statusOffline: 'Offline',
+    gameBadgesLabel: 'Game Badges',
+    searchHistory: 'Search History',
+    clearSearchHistory: 'Clear',
   },
   ru: {
     settingsTitle: 'Настройки',
@@ -107,9 +138,25 @@ const i18n = {
     showClock: 'Показать часы',
     usernameLabel: 'Имя пользователя',
     systemMonitor: 'Монитор системы',
+    sysHardware: 'Оборудование',
+    sysCpuModel: 'Процессор',
+    sysCores: 'Ядра',
+    sysGpu: 'Видеокарта',
+    sysMemory: 'Память',
+    sysTotal: 'Всего',
+    sysUsed: 'Используется',
+    sysFree: 'Свободно',
+    sysAppMem: 'Память приложения',
+    sysDisk: 'Диск',
+    sysNetwork: 'Сеть',
+    sysInfo: 'Информация о системе',
+    sysHostname: 'Хост',
+    sysUptime: 'Время работы',
     hotkeys: 'Горячие клавиши',
     hotkeySettings: 'Открыть / Закрыть настройки',
     hotkeyOverlay: 'Показать / Скрыть оверлей',
+    captureSettings: 'Захват экрана',
+    showOnCapture: 'Показывать при записи экрана',
     accountInfo: 'Аккаунт',
     currentGame: 'Текущая игра',
     serverInfo: 'Сервер',
@@ -151,6 +198,21 @@ const i18n = {
     historyDuration: 'Длительность',
     historyRegion: 'Регион',
     historyServer: 'Сервер',
+    complianceTitle: 'Соответствие и безопасность',
+    complianceText: 'Kairozun — безопасный внешний оверлей, который не нарушает Условия использования Roblox. Приложение не внедряет код в Roblox, не изменяет память игры, не автоматизирует геймплей и не предоставляет нечестных преимуществ. Оно лишь читает публично доступные лог-файлы и использует официальные публичные API Roblox.',
+    complianceNoInject: 'Не внедряет код и не модифицирует Roblox',
+    compliancePublicApi: 'Использует только официальные публичные API Roblox',
+    complianceNoCheat: 'Не автоматизирует геймплей и не предоставляет читы',
+    complianceExternal: 'Работает внешне — не затрагивает процесс игры',
+    complianceNoAuth: 'Не требует и не хранит учётные данные Roblox',
+    linkRobloxTos: 'Условия использования Roblox',
+    linkCommunityStandards: 'Стандарты сообщества',
+    statusInGame: 'В игре',
+    statusOnline: 'Онлайн',
+    statusOffline: 'Офлайн',
+    gameBadgesLabel: 'Игровые достижения',
+    searchHistory: 'История поиска',
+    clearSearchHistory: 'Очистить',
   },
 };
 
@@ -189,6 +251,8 @@ document.getElementById('btn-min').addEventListener('click', () => window.kairoz
 // ── About links ──────────────────────────────────────────────────────
 document.getElementById('link-github').addEventListener('click', () => window.kairozun.openExternal('https://github.com/skaisay/kairozun'));
 document.getElementById('link-discord').addEventListener('click', () => window.kairozun.openExternal('https://discord.gg/hR3MHdKAzU'));
+document.getElementById('link-roblox-tos').addEventListener('click', () => window.kairozun.openExternal('https://en.help.roblox.com/hc/en-us/articles/115004647846-Roblox-Terms-of-Use'));
+document.getElementById('link-roblox-community').addEventListener('click', () => window.kairozun.openExternal('https://en.help.roblox.com/hc/en-us/articles/203313410-Roblox-Community-Standards'));
 
 // ── Language buttons ─────────────────────────────────────────────────
 document.querySelectorAll('.lang-btn').forEach((btn) => {
@@ -216,8 +280,15 @@ const chkFavs = document.getElementById('chk-favs');
 const chkRegion = document.getElementById('chk-region');
 const chkUptime = document.getElementById('chk-uptime');
 const chkPlayerList = document.getElementById('chk-playerlist');
+const chkCapture = document.getElementById('chk-capture');
 
 [chkFps, chkPing, chkKill, chkSys, chkAccount, chkFriends, chkGame, chkPlayers, chkServer, chkVisits, chkClock, chkGenre, chkRating, chkFavs, chkRegion, chkUptime, chkPlayerList].forEach((el) => el.addEventListener('change', pushSettings));
+
+// Screen capture toggle
+chkCapture.addEventListener('change', () => {
+  window.kairozun.setCaptureMode(chkCapture.checked);
+  pushSettings();
+});
 
 // ── Overlay Opacity slider ───────────────────────────────────────────
 const overlayOpacitySlider = document.getElementById('overlay-opacity');
@@ -274,6 +345,7 @@ if (_saved) {
   if (_saved.showRegion !== undefined) chkRegion.checked = _saved.showRegion;
   if (_saved.showUptime !== undefined) chkUptime.checked = _saved.showUptime;
   if (_saved.showPlayerList !== undefined) chkPlayerList.checked = _saved.showPlayerList;
+  if (_saved.showOnCapture !== undefined) chkCapture.checked = _saved.showOnCapture;
   if (_saved.scaleTL !== undefined && scaleTL) scaleTL.value = _saved.scaleTL;
   if (_saved.scaleTR !== undefined && scaleTR) scaleTR.value = _saved.scaleTR;
   if (_saved.scaleBL !== undefined && scaleBL) scaleBL.value = _saved.scaleBL;
@@ -314,6 +386,7 @@ function pushSettings() {
     showRegion: chkRegion.checked,
     showUptime: chkUptime.checked,
     showPlayerList: chkPlayerList.checked,
+    showOnCapture: chkCapture.checked,
     scaleTL: scaleTL ? parseFloat(scaleTL.value) : 1,
     scaleTR: scaleTR ? parseFloat(scaleTR.value) : 1,
     scaleBL: scaleBL ? parseFloat(scaleBL.value) : 1,
@@ -330,11 +403,81 @@ const cpuValue = document.getElementById('cpu-value');
 const memBar = document.getElementById('mem-bar');
 const memValue = document.getElementById('mem-value');
 
-window.kairozun.onSystemMetrics(({ cpu, mem }) => {
-  cpuBar.style.width = cpu + '%';
-  cpuValue.textContent = cpu + '%';
-  memBar.style.width = mem + '%';
-  memValue.textContent = mem + '%';
+// Extended system elements
+const sysCpuModel = document.getElementById('sys-cpu-model');
+const sysCpuCores = document.getElementById('sys-cpu-cores');
+const sysGpuName = document.getElementById('sys-gpu-name');
+const sysGpuVram = document.getElementById('sys-gpu-vram');
+const sysMemTotal = document.getElementById('sys-mem-total');
+const sysMemUsed = document.getElementById('sys-mem-used');
+const sysMemFree = document.getElementById('sys-mem-free');
+const sysAppMem = document.getElementById('sys-app-mem');
+const sysDisks = document.getElementById('sys-disks');
+const sysNetwork = document.getElementById('sys-network');
+const sysOs = document.getElementById('sys-os');
+const sysHostname = document.getElementById('sys-hostname');
+const sysUptime = document.getElementById('sys-uptime');
+
+function formatUptime(seconds) {
+  const d = Math.floor(seconds / 86400);
+  const h = Math.floor((seconds % 86400) / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  if (d > 0) return `${d}d ${h}h ${m}m`;
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
+}
+
+function renderDisks(disks) {
+  if (!disks || !disks.length) { sysDisks.textContent = '--'; return; }
+  sysDisks.innerHTML = disks.map(d => {
+    const usedGB = (d.totalGB - d.freeGB).toFixed(1);
+    const pct = Math.round(((d.totalGB - d.freeGB) / d.totalGB) * 100);
+    return `<div class="sys-info-item">
+      <span class="sys-label">${d.drive}</span>
+      <span class="sys-val">${usedGB} / ${d.totalGB} GB (${pct}%)</span>
+    </div>`;
+  }).join('');
+}
+
+function renderNetwork(nets) {
+  if (!nets || !nets.length) { sysNetwork.textContent = '--'; return; }
+  sysNetwork.innerHTML = nets.map(n =>
+    `<div class="sys-info-item">
+      <span class="sys-label">${n.name}</span>
+      <span class="sys-val">${n.ip}</span>
+    </div>`
+  ).join('');
+}
+
+// Static system info (sent once)
+window.kairozun.onSystemStatic((info) => {
+  if (info.cpuModel) sysCpuModel.textContent = info.cpuModel;
+  if (info.cpuCores) sysCpuCores.textContent = info.cpuCores;
+  if (info.gpu?.name) sysGpuName.textContent = info.gpu.name;
+  if (info.gpu?.vram) sysGpuVram.textContent = info.gpu.vram + ' MB';
+  if (info.osVersion) sysOs.textContent = info.osVersion;
+  if (info.hostname) sysHostname.textContent = info.hostname;
+  renderDisks(info.disks);
+});
+
+// Disk updates (every 60s)
+window.kairozun.onSystemDisks((disks) => {
+  renderDisks(disks);
+});
+
+// Dynamic metrics (every 3s)
+window.kairozun.onSystemMetrics((m) => {
+  cpuBar.style.width = m.cpu + '%';
+  cpuValue.textContent = m.cpu + '%';
+  memBar.style.width = m.mem + '%';
+  memValue.textContent = m.mem + '%';
+
+  if (m.totalMemGB != null) sysMemTotal.textContent = m.totalMemGB + ' GB';
+  if (m.usedMemGB != null) sysMemUsed.textContent = m.usedMemGB + ' GB';
+  if (m.freeMemGB != null) sysMemFree.textContent = m.freeMemGB + ' GB';
+  if (m.appMemMB != null) sysAppMem.textContent = m.appMemMB + ' MB';
+  if (m.uptime != null) sysUptime.textContent = formatUptime(m.uptime);
+  if (m.network) renderNetwork(m.network);
 });
 
 // ── Roblox Data Display in Settings ──────────────────────────────────
@@ -358,22 +501,24 @@ function formatAccountAge(dateStr) {
 function formatDate(dateStr) {
   if (!dateStr) return '--';
   const d = new Date(dateStr);
-  return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  const locale = currentLang === 'ru' ? 'ru-RU' : 'en-US';
+  return d.toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 window.kairozun.onRobloxData((data) => {
   // Account card
+  const t = i18n[currentLang] || i18n.en;
   const statusBadge = document.getElementById('rbx-status-badge');
   if (data.running) {
     if (data.inGame) {
-      statusBadge.textContent = 'In Game';
+      statusBadge.textContent = t.statusInGame || 'In Game';
       statusBadge.className = 'roblox-status-badge in-game';
     } else {
-      statusBadge.textContent = 'Online';
+      statusBadge.textContent = t.statusOnline || 'Online';
       statusBadge.className = 'roblox-status-badge online';
     }
   } else {
-    statusBadge.textContent = 'Offline';
+    statusBadge.textContent = t.statusOffline || 'Offline';
     statusBadge.className = 'roblox-status-badge';
   }
 
@@ -388,9 +533,10 @@ window.kairozun.onRobloxData((data) => {
     const img = document.getElementById('rbx-avatar');
     if (img.src !== data.avatarUrl) {
       img.src = data.avatarUrl;
-      img.classList.remove('hidden');
-      document.getElementById('rbx-avatar-letter').classList.add('hidden');
     }
+    // Use load/error events instead of immediate show
+    img.onload = () => { img.classList.remove('hidden'); document.getElementById('rbx-avatar-letter').classList.add('hidden'); };
+    img.onerror = () => { img.classList.add('hidden'); document.getElementById('rbx-avatar-letter').classList.remove('hidden'); };
   }
   if (data.friendsCount != null) {
     document.getElementById('rbx-friends').textContent = data.friendsCount;
@@ -407,7 +553,7 @@ window.kairozun.onRobloxData((data) => {
   if (data.gameName && data.inGame) {
     document.getElementById('rbx-game-title').textContent = data.gameName;
   } else if (notInGame) {
-    document.getElementById('rbx-game-title').textContent = 'Not in game';
+    document.getElementById('rbx-game-title').textContent = t.notInGame || 'Not in game';
   }
   if (data.lastLocation && data.inGame) {
     document.getElementById('rbx-game-sub').textContent = data.lastLocation;
@@ -657,7 +803,8 @@ function keyEventToAccelerator(e) {
   else if (code === 'Slash' || code === 'NumpadDivide') parts.push('/');
   else if (code === 'NumpadMultiply') parts.push('nummult');
   else return null;
-  if (parts.length < 2) return null; // require at least one modifier + one key
+  // Allow single-key bindings (letters, digits, F-keys, special keys)
+  if (parts.length < 1) return null;
   return parts.join('+');
 }
 
@@ -743,6 +890,7 @@ function renderGameHistory() {
           '<div class="history-meta">' + dateStr + ' ' + timeOfDay + ' \u2022 ' + timeStr + (entry.serverRegion ? ' \u2022 ' + escapeSettingsHtml(entry.serverRegion) : '') + '</div>' +
         '</div>' +
         '<button class="history-expand-btn" data-idx="' + idx + '"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></button>' +
+        '<button class="history-delete-btn" data-idx="' + idx + '" title="Delete"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>' +
       '</div>' +
       '<div class="history-detail" id="history-detail-' + idx + '">' +
         '<div class="history-detail-row"><span class="history-detail-label">' + (t.historyStarted || 'Started') + '</span><span>' + dateStr + ' ' + timeOfDay + '</span></div>' +
@@ -767,6 +915,15 @@ function renderGameHistory() {
         detail.classList.add('open');
         btn.classList.add('open');
       }
+    });
+  });
+  // Delete entry event handlers
+  list.querySelectorAll('.history-delete-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const idx = parseInt(btn.dataset.idx);
+      window.kairozun.deleteHistoryEntry(idx);
+      renderGameHistory();
     });
   });
 }
@@ -844,6 +1001,9 @@ async function doPlayerLookup(usernameParam) {
 
     document.getElementById('player-result-section').classList.remove('hidden');
 
+    // Save to search history
+    addToSearchHistory(result.username || username);
+
     // Groups
     const groupsList = document.getElementById('player-groups-list');
     if (result.groups && result.groups.length > 0) {
@@ -860,7 +1020,7 @@ async function doPlayerLookup(usernameParam) {
     const t = i18n[currentLang] || i18n.en;
     if (result.gameBadges) {
       const label = document.getElementById('player-badges-label');
-      label.textContent = 'Game Badges (' + result.gameBadges.length + '/' + result.totalGameBadges + ' ' + (t.badgesOwned || 'owned') + ')';
+      label.textContent = (t.gameBadgesLabel || 'Game Badges') + ' (' + result.gameBadges.length + '/' + result.totalGameBadges + ' ' + (t.badgesOwned || 'owned') + ')';
       const badgesList = document.getElementById('player-badges-list');
       if (result.gameBadges.length > 0) {
         badgesList.innerHTML = result.gameBadges.map(b =>
@@ -887,3 +1047,52 @@ playerSearchBtn.addEventListener('click', () => doPlayerLookup());
 playerSearchInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') doPlayerLookup();
 });
+
+// ── Player Search History ──────────────────────────────────────────────────
+const SEARCH_HISTORY_KEY = 'kairozun_search_history';
+const MAX_SEARCH_HISTORY = 10;
+
+function loadSearchHistory() {
+  try { return JSON.parse(localStorage.getItem(SEARCH_HISTORY_KEY)) || []; } catch { return []; }
+}
+
+function saveSearchHistory(history) {
+  localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(history.slice(0, MAX_SEARCH_HISTORY)));
+}
+
+function addToSearchHistory(username) {
+  if (!username) return;
+  let history = loadSearchHistory();
+  history = history.filter(h => h.toLowerCase() !== username.toLowerCase());
+  history.unshift(username);
+  if (history.length > MAX_SEARCH_HISTORY) history.length = MAX_SEARCH_HISTORY;
+  saveSearchHistory(history);
+  renderSearchHistory();
+}
+
+function renderSearchHistory() {
+  const container = document.getElementById('search-history-chips');
+  const section = document.getElementById('search-history-section');
+  const history = loadSearchHistory();
+  const t = i18n[currentLang] || i18n.en;
+  if (!history.length) {
+    section.classList.add('hidden');
+    return;
+  }
+  section.classList.remove('hidden');
+  document.getElementById('search-history-label').textContent = t.searchHistory || 'Search History';
+  document.getElementById('search-history-clear').textContent = t.clearSearchHistory || 'Clear';
+  container.innerHTML = history.map(name =>
+    '<button class="search-history-chip" data-name="' + escapePlayerHtml(name) + '">' + escapePlayerHtml(name) + '</button>'
+  ).join('');
+  container.querySelectorAll('.search-history-chip').forEach(chip => {
+    chip.addEventListener('click', () => doPlayerLookup(chip.dataset.name));
+  });
+}
+
+document.getElementById('search-history-clear').addEventListener('click', () => {
+  localStorage.removeItem(SEARCH_HISTORY_KEY);
+  renderSearchHistory();
+});
+
+renderSearchHistory();

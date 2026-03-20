@@ -25,6 +25,8 @@ function httpGet(url) {
 // Faster GPU startup
 app.commandLine.appendSwitch('disable-gpu-vsync');
 app.commandLine.appendSwitch('disable-software-rasterizer');
+app.commandLine.appendSwitch('enable-gpu-rasterization');
+app.commandLine.appendSwitch('enable-zero-copy');
 
 const ICON_PATH = path.join(__dirname, '..', 'assets', 'icon.ico');
 
@@ -61,6 +63,12 @@ function loadGameHistory() {
 
 function saveGameHistory() {
   try { fs.writeFileSync(HISTORY_PATH, JSON.stringify(gameHistory.slice(0, 50))); } catch {}
+}
+
+// ── Single Instance Lock ────────────────────────────────────────────
+const gotSingleLock = app.requestSingleInstanceLock();
+if (!gotSingleLock) {
+  app.quit();
 }
 
 let overlayWindow = null;
@@ -174,14 +182,26 @@ function parseRobloxLog(text) {
   // Extract ping from Roblox log stats (most accurate source)
   // Reset each cycle so we get fresh values
   logPingMs = null;
+  // Search only the last ~200KB of log for recent ping values (fresher data)
+  const recentText = text.length > 200000 ? text.slice(-200000) : text;
   const pingPatterns = [
+    // Roblox network stats (most reliable, appears in modern Roblox clients)
+    /STAT_Ping\s*[:=]\s*(\d+(?:\.\d+)?)/gi,
+    /Stats\.Network\.Ping\s*[:=]\s*(\d+(?:\.\d+)?)/gi,
+    // RakNet / UDMUX ping values
     /averagePingMs["'\s:=]+(\d+(?:\.\d+)?)/gi,
-    /"ping"\s*:\s*(\d+(?:\.\d+)?)/gi,
-    /MicroProfiler.*?ping["'\s:=]+(\d+(?:\.\d+)?)/gi,
     /connectionPing["'\s:=]+(\d+(?:\.\d+)?)/gi,
+    /networkPing["'\s:=]+(\d+(?:\.\d+)?)/gi,
+    /avgPing["'\s:=]+(\d+(?:\.\d+)?)/gi,
+    // JSON format in telemetry
+    /"ping"\s*:\s*(\d+(?:\.\d+)?)/gi,
+    // DataPing in connection quality reports
+    /DataPing\s*[:=]\s*(\d+(?:\.\d+)?)/gi,
+    // MicroProfiler network stats
+    /MicroProfiler.*?ping["'\s:=]+(\d+(?:\.\d+)?)/gi,
   ];
   for (const pat of pingPatterns) {
-    const matches = [...text.matchAll(pat)];
+    const matches = [...recentText.matchAll(pat)];
     if (matches.length > 0) {
       const last = matches[matches.length - 1];
       const val = Math.round(parseFloat(last[1]));
@@ -244,21 +264,23 @@ function tcpPing(ip, port, timeout, cb) {
 }
 
 function doPing() {
-  // 1. Log-parsed ping (most accurate — from Roblox client itself)
+  // 1. Log-parsed ping (most accurate — straight from Roblox client)
   if (logPingMs != null && logPingMs > 0) {
     lastPingMs = logPingMs;
     return;
   }
-  // Build cascade: game server → game server:443 → CDN
+  // 2. Server API ping (second best — from Roblox servers API)
+  if (robloxApiData.serverPing != null && robloxApiData.serverPing > 0) {
+    lastPingMs = robloxApiData.serverPing;
+    return;
+  }
+  // 3. TCP ping fallback (least accurate — network-level RTT, not game ping)
   const targets = [];
   if (robloxServerIp) {
-    const gamePort = parseInt(robloxServerPort) || 443;
-    targets.push([robloxServerIp, gamePort, 800]);
-    if (gamePort !== 443) targets.push([robloxServerIp, 443, 800]);
+    targets.push([robloxServerIp, 443, 800]);
   }
   if (pingTargetIp) targets.push([pingTargetIp, 443, 2000]);
   if (targets.length === 0) { resolvePingTarget(); return; }
-  // Try each target in order, stop at first success
   let i = 0;
   const tryNext = () => {
     if (i >= targets.length) return;
@@ -274,8 +296,8 @@ function doPing() {
 function startPingLoop() {
   if (pingInterval) clearInterval(pingInterval);
   resolvePingTarget();
-  setTimeout(doPing, 500);
-  pingInterval = setInterval(doPing, 2000);
+  setTimeout(doPing, 300);
+  pingInterval = setInterval(doPing, 3000);
 }
 
 // ── Roblox API ──────────────────────────────────────────────────────
@@ -284,7 +306,7 @@ let robloxApiData = {};
 
 function httpsGet(url) {
   return new Promise((resolve, reject) => {
-    https.get(url, { timeout: 5000 }, (res) => {
+    https.get(url, { timeout: 8000 }, (res) => {
       let data = '';
       res.on('data', (chunk) => data += chunk);
       res.on('end', () => {
@@ -303,7 +325,7 @@ function httpsPost(url, body) {
       hostname: parsed.hostname,
       path: parsed.pathname + parsed.search,
       method: 'POST',
-      timeout: 5000,
+      timeout: 8000,
       headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(postData) },
     }, (res) => {
       let data = '';
@@ -340,11 +362,11 @@ async function fetchRobloxApiById(userId) {
   if (!userId) return;
   try {
     const [avatarResp, friendsResp] = await Promise.all([
-      httpsGet(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${userId}&size=48x48&format=Png`),
+      httpsGet(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${userId}&size=150x150&format=Png`),
       httpsGet(`https://friends.roblox.com/v1/users/${userId}/friends/count`),
     ]);
 
-    if (avatarResp && avatarResp.data && avatarResp.data[0]) {
+    if (avatarResp && avatarResp.data && avatarResp.data[0] && avatarResp.data[0].imageUrl) {
       robloxApiData.avatarUrl = avatarResp.data[0].imageUrl;
     }
     if (friendsResp && friendsResp.count != null) {
@@ -467,8 +489,10 @@ async function fetchServerPlayers() {
     let firstServer = null;
     let gotAnyData = false;
 
-    for (let page = 0; page < 10; page++) {
-      const url = `https://games.roblox.com/v1/games/${robloxPlaceId}/servers/Public?sortOrder=Desc&limit=100${cursor ? '&cursor=' + encodeURIComponent(cursor) : ''}`;
+    // Search Asc (smaller servers) then Desc (popular servers) to find ours
+    // Reduced pages to avoid rate limiting (playerTokens removed, so less data needed)
+    for (let page = 0; page < 2; page++) {
+      const url = `https://games.roblox.com/v1/games/${robloxPlaceId}/servers/Public?sortOrder=Asc&limit=100${cursor ? '&cursor=' + encodeURIComponent(cursor) : ''}`;
       const resp = await httpsGet(url);
       if (!resp || !resp.data) break;
 
@@ -482,7 +506,6 @@ async function fetchServerPlayers() {
           robloxApiData.serverMaxPlayers = srv.maxPlayers;
           if (srv.fps) robloxApiData.serverFps = Math.round(srv.fps);
           if (srv.ping) robloxApiData.serverPing = Math.round(srv.ping);
-          robloxApiData.playerTokens = srv.playerTokens && srv.playerTokens.length > 0 ? srv.playerTokens : null;
           foundOurServer = true;
           break;
         }
@@ -493,6 +516,28 @@ async function fetchServerPlayers() {
         cursor = resp.nextPageCursor;
       } else break;
     }
+
+    // If not found with Asc, try Desc (most popular servers first) — 1 page
+    if (!foundOurServer && jobId) {
+      const url2 = `https://games.roblox.com/v1/games/${robloxPlaceId}/servers/Public?sortOrder=Desc&limit=100`;
+      const resp2 = await httpsGet(url2);
+      if (resp2 && resp2.data) {
+        gotAnyData = true;
+        totalServers += resp2.data.length;
+        for (const srv of resp2.data) {
+          if (!firstServer) firstServer = srv;
+          if (srv.id === jobId) {
+            robloxApiData.serverPlayerCount = srv.playing;
+            robloxApiData.serverMaxPlayers = srv.maxPlayers;
+            if (srv.fps) robloxApiData.serverFps = Math.round(srv.fps);
+            if (srv.ping) robloxApiData.serverPing = Math.round(srv.ping);
+            foundOurServer = true;
+            break;
+          }
+        }
+      }
+    }
+
     if (gotAnyData) robloxApiData.totalServers = totalServers;
 
     if (!foundOurServer && firstServer) {
@@ -501,38 +546,9 @@ async function fetchServerPlayers() {
   } catch { /* ignore */ }
 }
 
-async function fetchPlayerThumbnails() {
-  const tokens = robloxApiData.playerTokens;
-  if (!tokens || tokens.length === 0) return;
-  const requests = tokens.slice(0, 25).map((token, i) => ({
-    requestId: String(i),
-    targetId: 0,
-    token,
-    type: 'AvatarHeadShot',
-    size: '150x150',
-    format: 'Png',
-    isCircular: false,
-  }));
-  for (let attempt = 0; attempt < 3; attempt++) {
-    try {
-      const resp = await httpsPost('https://thumbnails.roblox.com/v1/batch', requests);
-      if (resp && resp.data) {
-        const avatars = resp.data
-          .filter(d => d.imageUrl)
-          .map(d => d.imageUrl);
-        if (avatars.length > 0) {
-          robloxApiData.playerAvatars = avatars;
-          if (avatars.length >= requests.length * 0.5) return;
-        }
-        const pending = resp.data.some(d => d.state === 'Pending');
-        if (!pending) return;
-      } else {
-        return;
-      }
-    } catch { return; }
-    await new Promise(r => setTimeout(r, 2000));
-  }
-}
+// playerTokens were removed from Roblox servers API (returns empty array now).
+// fetchPlayerThumbnails is no longer functional — kept as no-op for call compatibility.
+async function fetchPlayerThumbnails() { /* Roblox removed playerTokens from servers API */ }
 
 // Fetch server players: own user + friends on same server
 async function fetchServerPlayerList() {
@@ -588,20 +604,19 @@ async function fetchServerPlayerList() {
     }
   } catch { /* ignore */ }
 
-  // 3. Fill remaining slots with anonymous players from playerTokens or placeholders
+  // 3. Fill remaining slots with anonymous placeholders
+  // (Roblox removed playerTokens — no way to get anonymous player avatars anymore)
   const totalOnServer = robloxApiData.serverPlayerCount || 1;
   const knownCount = players.length;
   const remaining = Math.max(0, totalOnServer - knownCount);
 
   if (remaining > 0) {
-    // Use playerAvatars (from playerTokens thumbnails) if available
-    const anonAvatars = robloxApiData.playerAvatars || [];
     for (let i = 0; i < Math.min(remaining, 20); i++) {
       players.push({
         userId: 'anon-' + i,
         username: 'Player ' + (knownCount + i + 1),
         displayName: 'Player ' + (knownCount + i + 1),
-        avatarUrl: anonAvatars[i] || null,
+        avatarUrl: null,
         isAnon: true,
       });
     }
@@ -611,15 +626,46 @@ async function fetchServerPlayerList() {
 }
 
 // Fetch API data periodically
-// Fast loop (10s): game info, presence — for live data
-// Server loop (20s): server players — heavier call, separate to avoid rate limits
-// Slow loop (45s): user info, votes, followers — rarely change
+// Fast loop (8s): game info, presence — for live data
+// Server loop (12s): server players — heavier call, separate to avoid rate limits
+// Slow loop (40s): user info, votes, followers — rarely change
 let apiFastInterval = null;
 let apiSlowInterval = null;
 let apiServerInterval = null;
 let apiFastBusy = false;
 let apiServerBusy = false;
 let apiSlowBusy = false;
+let lastInGameState = false; // track in-game transition for immediate fetch
+
+async function doImmediateFullFetch() {
+  // Called once when transitioning to in-game state
+  if (!robloxUserId && !robloxUsername) return;
+  try {
+    if (!robloxUserId && robloxUsername) await fetchRobloxApi(robloxUsername);
+    if (!robloxUserId && robloxUserIdFromLog) {
+      robloxUserId = parseInt(robloxUserIdFromLog);
+      await fetchRobloxApiById(robloxUserId);
+    }
+    // Fetch avatar immediately if not yet loaded
+    if (!robloxApiData.avatarUrl && robloxUserId) {
+      await fetchRobloxApiById(robloxUserId);
+    }
+    // Fetch everything in parallel for fastest possible loading
+    await Promise.all([
+      fetchGameInfo(),
+      fetchUserPresence(),
+      fetchGameVotes(),
+      fetchUserInfo(),
+      fetchFollowersCount(),
+    ]);
+    // Server players need placeId from above calls
+    if (robloxPlaceId) {
+      await fetchServerPlayers();
+      await fetchServerPlayerList();
+    }
+  } catch { /* ignore */ }
+}
+
 function startApiLoop() {
   apiFastInterval = setInterval(async () => {
     if (apiFastBusy || !robloxRunning || (!robloxInGame && robloxApiData.presenceType !== 2)) return;
@@ -627,18 +673,19 @@ function startApiLoop() {
     apiFastBusy = true;
     try {
       if (!robloxUserId && robloxUsername) await fetchRobloxApi(robloxUsername);
+      // Refresh avatar if not yet loaded (first cycles)
+      if (!robloxApiData.avatarUrl && robloxUserId) await fetchRobloxApiById(robloxUserId);
       await Promise.all([fetchGameInfo(), fetchUserPresence()]);
     } finally { apiFastBusy = false; }
-  }, 10000);
+  }, 8000);
   apiServerInterval = setInterval(async () => {
     if (apiServerBusy || !robloxRunning || (!robloxInGame && robloxApiData.presenceType !== 2) || !robloxPlaceId) return;
     apiServerBusy = true;
     try {
       await fetchServerPlayers();
-      await fetchPlayerThumbnails();
       await fetchServerPlayerList();
     } finally { apiServerBusy = false; }
-  }, 15000);
+  }, 12000);
   apiSlowInterval = setInterval(async () => {
     if (apiSlowBusy || !robloxRunning || (!robloxInGame && robloxApiData.presenceType !== 2) || !robloxUserId) return;
     apiSlowBusy = true;
@@ -646,7 +693,7 @@ function startApiLoop() {
       await fetchRobloxApiById(robloxUserId);
       await Promise.all([fetchGameVotes(), fetchUserInfo(), fetchFollowersCount()]);
     } finally { apiSlowBusy = false; }
-  }, 45000);
+  }, 40000);
 }
 
 // Cache Roblox PID to avoid calling tasklist every cycle
@@ -664,12 +711,12 @@ function checkRobloxRunning(callback) {
       robloxPid = null; // process gone, fall through to full check
     }
   }
-  // Full check only every 5s when no cached PID
+  // Full check only every 3s when no cached PID
   const now = Date.now();
-  if (now - lastProcessCheck < 5000) { callback(false); return; }
+  if (now - lastProcessCheck < 3000) { callback(false); return; }
   lastProcessCheck = now;
   execFile('tasklist', ['/FI', 'IMAGENAME eq RobloxPlayerBeta.exe', '/FO', 'CSV', '/NH'], {
-    windowsHide: true, timeout: 3000,
+    windowsHide: true, timeout: 2000,
   }, (err, stdout) => {
     const found = !err && stdout.includes('RobloxPlayerBeta');
     if (found) {
@@ -697,6 +744,8 @@ function readLogFull(filePath) {
 function startRobloxWatcher() {
   startPingLoop();
   startApiLoop();
+  // Track last sent data to avoid redundant IPC
+  let lastSentDataJson = '';
   setTimeout(() => {
     robloxInterval = setInterval(() => {
       checkRobloxRunning((running) => {
@@ -755,8 +804,9 @@ function startRobloxWatcher() {
               } // end effectivelyInGame guard
 
               // User left game but Roblox still running — clear game-specific data
-              // Only clear if BOTH log and presence API agree user is not in game
-              const confirmedNotInGame = !robloxInGame && robloxApiData.presenceType !== 2;
+              // Trust log disconnect immediately (presence API updates slowly)
+              const confirmedNotInGame = !robloxInGame;
+              if (confirmedNotInGame) robloxApiData.presenceType = 0;
               if (confirmedNotInGame && currentGameUniverseId) {
                 if (currentGameStart) {
                   const dur = Math.floor((Date.now() - new Date(currentGameStart).getTime()) / 1000);
@@ -797,39 +847,49 @@ function startRobloxWatcher() {
                 robloxApiData = kept;
               }
 
+              // Detect in-game transition for immediate data loading
+              const currentlyInGame = robloxInGame || robloxApiData.presenceType === 2;
+              const justJoinedGame = currentlyInGame && !lastInGameState;
+
               // First-time API fetch — use userId from log if no username
-              if ((robloxInGame || robloxApiData.presenceType === 2) && !robloxUserId) {
+              if (currentlyInGame && !robloxUserId) {
                 if (robloxUserIdFromLog) {
                   robloxUserId = parseInt(robloxUserIdFromLog);
-                  fetchRobloxApiById(robloxUserId).then(async () => {
-                    await Promise.all([fetchGameInfo(), fetchGameVotes(), fetchUserPresence(), fetchUserInfo(), fetchFollowersCount()]);
-                    await fetchServerPlayers();
-                    await fetchPlayerThumbnails();
-                    await fetchServerPlayerList();
-                  });
+                  doImmediateFullFetch();
                 } else if (robloxUsername) {
-                  fetchRobloxApi(robloxUsername).then(async () => {
-                    await Promise.all([fetchGameInfo(), fetchGameVotes(), fetchUserPresence(), fetchUserInfo(), fetchFollowersCount()]);
-                    await fetchServerPlayers();
-                    await fetchPlayerThumbnails();
-                    await fetchServerPlayerList();
-                  });
+                  doImmediateFullFetch();
                 }
-              } else if ((robloxInGame || robloxApiData.presenceType === 2) && newUniverseDetected) {
-                // New game detected — fetch game info immediately (don't wait for presence, log is authoritative)
-                Promise.all([fetchGameInfo(), fetchGameVotes(), fetchUserPresence(), fetchServerPlayers()]).then(() => fetchPlayerThumbnails().then(() => fetchServerPlayerList()));
+              } else if (currentlyInGame && (newUniverseDetected || justJoinedGame)) {
+                // New game or fresh join — fetch everything immediately
+                doImmediateFullFetch();
+              } else if (currentlyInGame && robloxUserId && !robloxApiData.displayName) {
+                // Retry: in-game but critical data missing (previous fetch failed)
+                doImmediateFullFetch();
+              } else if (!currentlyInGame && !robloxUserId && (robloxUserIdFromLog || robloxUsername)) {
+                // Roblox running but not in game — still fetch account info
+                if (robloxUserIdFromLog) {
+                  robloxUserId = parseInt(robloxUserIdFromLog);
+                  fetchRobloxApiById(robloxUserId).then(() => fetchUserPresence()).catch(() => {});
+                } else if (robloxUsername) {
+                  fetchRobloxApi(robloxUsername).then(() => fetchUserPresence()).catch(() => {});
+                }
+              } else if (!currentlyInGame && robloxUserId && !robloxApiData.displayName) {
+                // Retry: not in game but account data missing
+                fetchRobloxApiById(robloxUserId).then(() => fetchUserPresence()).catch(() => {});
               }
 
+              lastInGameState = currentlyInGame;
+
               // Trigger immediate ping on first Roblox detection
-              if ((robloxInGame || robloxApiData.presenceType === 2) && lastPingMs == null) doPing();
+              if (currentlyInGame && lastPingMs == null) doPing();
             } catch { /* ignore */ }
           }
-          // Send in-game flag to renderer (consider both log and API evidence)
-          // Send in-game flag to renderer (log + API evidence)
-          robloxData.inGame = robloxInGame || robloxApiData.presenceType === 2;
+          // Send in-game flag to renderer (log is authoritative for disconnect)
+          robloxData.inGame = robloxInGame;
           // Merge API data
           Object.assign(robloxData, robloxApiData);
-          if (robloxInGame || robloxApiData.presenceType === 2 || robloxApiData.presenceType === 2) {
+          if (robloxInGame) {
+            if (robloxServerIp) robloxData.serverIp = robloxServerIp;
             if (robloxServerPort) robloxData.serverPort = robloxServerPort;
             if (serverRegion) robloxData.serverRegion = serverRegion;
             if (robloxServerJoinTime) robloxData.serverJoinTime = robloxServerJoinTime;
@@ -868,20 +928,27 @@ function startRobloxWatcher() {
           robloxJobIdFromLog = null;
           robloxPid = null;
           robloxInGame = false;
+          lastInGameState = false;
           robloxApiData = {};
         }
         const send = (win) => {
           if (win && !win.isDestroyed()) win.webContents.send('roblox-data', robloxData);
         };
-        send(overlayWindow);
-        send(settingsWindow);
+        // Only send if data actually changed (reduces IPC overhead)
+        const dataJson = JSON.stringify(robloxData);
+        if (dataJson !== lastSentDataJson) {
+          lastSentDataJson = dataJson;
+          send(overlayWindow);
+          send(settingsWindow);
+        }
       });
-    }, 2000);
-  }, 500);
+    }, 2500);
+  }, 300);
 }
 
 function createOverlay() {
-  const { width, height } = screen.getPrimaryDisplay().workAreaSize;
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { width, height } = primaryDisplay.size;
 
   overlayWindow = new BrowserWindow({
     width,
@@ -895,17 +962,26 @@ function createOverlay() {
     resizable: false,
     focusable: false,
     hasShadow: false,
+    fullscreenable: true,
     icon: ICON_PATH,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
+      backgroundThrottling: false,
     },
   });
 
   overlayWindow.setIgnoreMouseEvents(true, { forward: true });
   overlayWindow.loadFile(path.join(__dirname, 'renderer', 'overlay.html'));
   overlayWindow.setAlwaysOnTop(true, 'screen-saver');
+
+  // Apply saved screen recording visibility
+  if (savedSettings && savedSettings.showOnCapture) {
+    overlayWindow.setContentProtection(false);
+  } else {
+    overlayWindow.setContentProtection(false);
+  }
 }
 
 function createSettingsWindow() {
@@ -922,6 +998,7 @@ function createSettingsWindow() {
     resizable: false,
     alwaysOnTop: true,
     hasShadow: false,
+    fullscreenable: false,
     backgroundColor: '#00000000',
     icon: ICON_PATH,
     webPreferences: {
@@ -932,6 +1009,12 @@ function createSettingsWindow() {
   });
 
   settingsWindow.loadFile(path.join(__dirname, 'renderer', 'settings.html'));
+
+  settingsWindow.webContents.on('did-finish-load', () => {
+    if (cachedStaticInfo && settingsWindow && !settingsWindow.isDestroyed()) {
+      settingsWindow.webContents.send('system-static', cachedStaticInfo);
+    }
+  });
 }
 
 // ── System metrics ──────────────────────────────────────────────────
@@ -949,7 +1032,65 @@ function getCpuUsage() {
 
 let prevCpu = getCpuUsage();
 
+// ── Collect static system info once ──────────────────────────────────
+let gpuInfo = null;
+function getGpuInfo() {
+  return new Promise((resolve) => {
+    execFile('wmic', ['path', 'win32_VideoController', 'get', 'Name,AdapterRAM', '/value'], { timeout: 5000 }, (err, stdout) => {
+      if (err || !stdout) return resolve(null);
+      const name = (stdout.match(/Name=(.+)/i) || [])[1]?.trim() || null;
+      const vramBytes = parseInt((stdout.match(/AdapterRAM=(\d+)/i) || [])[1]) || 0;
+      const vramMB = vramBytes ? Math.round(vramBytes / 1048576) : 0;
+      resolve({ name, vram: vramMB });
+    });
+  });
+}
+
+function getDiskUsage() {
+  return new Promise((resolve) => {
+    execFile('wmic', ['logicaldisk', 'where', 'DriveType=3', 'get', 'DeviceID,Size,FreeSpace', '/value'], { timeout: 5000 }, (err, stdout) => {
+      if (err || !stdout) return resolve([]);
+      const disks = [];
+      const blocks = stdout.split(/\r?\n\r?\n/).filter(b => b.includes('DeviceID'));
+      for (const block of blocks) {
+        const id = (block.match(/DeviceID=(.+)/i) || [])[1]?.trim();
+        const free = parseInt((block.match(/FreeSpace=(\d+)/i) || [])[1]) || 0;
+        const size = parseInt((block.match(/Size=(\d+)/i) || [])[1]) || 0;
+        if (id && size) disks.push({ drive: id, totalGB: +(size / 1073741824).toFixed(1), freeGB: +(free / 1073741824).toFixed(1) });
+      }
+      resolve(disks);
+    });
+  });
+}
+
+// Cache static info
+let cachedStaticInfo = null;
+async function getStaticSystemInfo() {
+  if (cachedStaticInfo) return cachedStaticInfo;
+  const cpus = os.cpus();
+  gpuInfo = await getGpuInfo();
+  const disks = await getDiskUsage();
+  cachedStaticInfo = {
+    cpuModel: cpus[0]?.model?.trim() || 'Unknown',
+    cpuCores: cpus.length,
+    osVersion: `${os.type()} ${os.release()}`,
+    hostname: os.hostname(),
+    gpu: gpuInfo,
+    disks,
+  };
+  return cachedStaticInfo;
+}
+
 function startSystemMetrics() {
+  // Send static info once on start
+  getStaticSystemInfo().then(staticInfo => {
+    const sendStatic = (win) => {
+      if (win && !win.isDestroyed()) win.webContents.send('system-static', staticInfo);
+    };
+    sendStatic(overlayWindow);
+    sendStatic(settingsWindow);
+  });
+
   systemInterval = setInterval(() => {
     const cur = getCpuUsage();
     const idleDiff = cur.idle - prevCpu.idle;
@@ -959,15 +1100,51 @@ function startSystemMetrics() {
 
     const totalMem = os.totalmem();
     const freeMem = os.freemem();
-    const memPercent = Math.round(((totalMem - freeMem) / totalMem) * 100);
+    const usedMem = totalMem - freeMem;
+    const memPercent = Math.round((usedMem / totalMem) * 100);
 
+    const uptimeSec = os.uptime();
+    const procMem = process.memoryUsage();
+
+    // Network interfaces
+    const nets = os.networkInterfaces();
+    const netInfo = [];
+    for (const [name, addrs] of Object.entries(nets)) {
+      for (const a of addrs) {
+        if (!a.internal && a.family === 'IPv4') {
+          netInfo.push({ name, ip: a.address });
+        }
+      }
+    }
+
+    const metrics = {
+      cpu: cpuPercent,
+      mem: memPercent,
+      totalMemGB: +(totalMem / 1073741824).toFixed(1),
+      usedMemGB: +(usedMem / 1073741824).toFixed(1),
+      freeMemGB: +(freeMem / 1073741824).toFixed(1),
+      uptime: uptimeSec,
+      appMemMB: Math.round(procMem.rss / 1048576),
+      network: netInfo,
+    };
     if (overlayWindow && !overlayWindow.isDestroyed()) {
-      overlayWindow.webContents.send('system-metrics', { cpu: cpuPercent, mem: memPercent });
+      overlayWindow.webContents.send('system-metrics', metrics);
     }
     if (settingsWindow && !settingsWindow.isDestroyed()) {
-      settingsWindow.webContents.send('system-metrics', { cpu: cpuPercent, mem: memPercent });
+      settingsWindow.webContents.send('system-metrics', metrics);
     }
-  }, 2000);
+  }, 3000);
+
+  // Refresh disk usage every 60 seconds
+  setInterval(async () => {
+    const disks = await getDiskUsage();
+    if (cachedStaticInfo) cachedStaticInfo.disks = disks;
+    const sendDisk = (win) => {
+      if (win && !win.isDestroyed()) win.webContents.send('system-disks', disks);
+    };
+    sendDisk(overlayWindow);
+    sendDisk(settingsWindow);
+  }, 60000);
 }
 
 // ── IPC handlers ────────────────────────────────────────────────────
@@ -976,6 +1153,10 @@ ipcMain.on('update-settings', (_e, settings) => {
   saveSettings(savedSettings);
   if (overlayWindow && !overlayWindow.isDestroyed()) {
     overlayWindow.webContents.send('apply-settings', savedSettings);
+  }
+  // Apply capture mode setting
+  if (settings.showOnCapture !== undefined && overlayWindow && !overlayWindow.isDestroyed()) {
+    overlayWindow.setContentProtection(!settings.showOnCapture);
   }
 });
 
@@ -993,6 +1174,13 @@ ipcMain.on('get-settings', (e) => {
 
 ipcMain.on('get-game-history', (e) => {
   e.returnValue = gameHistory;
+});
+
+ipcMain.on('delete-history-entry', (_e, idx) => {
+  if (typeof idx === 'number' && idx >= 0 && idx < gameHistory.length) {
+    gameHistory.splice(idx, 1);
+    saveGameHistory();
+  }
 });
 
 // ── Player Lookup API ───────────────────────────────────────────────
@@ -1100,6 +1288,13 @@ ipcMain.on('set-hotkey', (_e, { action, accelerator }) => {
   } catch { /* ignore invalid accelerator */ }
 });
 
+// Toggle screen recording visibility
+ipcMain.on('set-capture-mode', (_e, visible) => {
+  if (overlayWindow && !overlayWindow.isDestroyed()) {
+    overlayWindow.setContentProtection(!visible);
+  }
+});
+
 // Allow overlay to toggle mouse passthrough for dragging
 ipcMain.on('overlay-mouse', (_e, ignore) => {
   if (overlayWindow && !overlayWindow.isDestroyed()) {
@@ -1118,6 +1313,16 @@ ipcMain.on('open-external', (_e, url) => {
 });
 
 // ── App lifecycle ───────────────────────────────────────────────────
+app.on('second-instance', () => {
+  // Focus existing instance when a second one is launched
+  if (settingsWindow && !settingsWindow.isDestroyed()) {
+    if (settingsWindow.isMinimized()) settingsWindow.restore();
+    settingsWindow.focus();
+  } else if (overlayWindow && !overlayWindow.isDestroyed()) {
+    overlayWindow.show();
+  }
+});
+
 app.whenReady().then(() => {
   savedSettings = loadSettings();
   loadGameHistory();
@@ -1146,16 +1351,18 @@ app.whenReady().then(() => {
     { label: 'Quit', click: () => { app.isQuiting = true; app.quit(); } },
   ]));
 
-  // Validate accelerator — must contain modifier + alphanumeric/F-key/named key
+  // Validate accelerator — single key or modifier+key combo
   function isValidAccelerator(acc) {
     if (!acc || typeof acc !== 'string') return false;
     const parts = acc.split('+');
-    if (parts.length < 2) return false;
+    if (parts.length === 0) return false;
     const key = parts[parts.length - 1];
-    // Must end with: letter, digit, F-key, or known named key
     return /^[A-Z0-9]$/.test(key) || /^F\d{1,2}$/.test(key) ||
       ['Space','Tab','Enter','Backspace','Delete','Insert','Home','End',
-       'PageUp','PageDown','Up','Down','Left','Right'].includes(key);
+       'PageUp','PageDown','Up','Down','Left','Right',
+       '-','=','[',']','\\',';',"'",'.','/',
+       'num0','num1','num2','num3','num4','num5','num6','num7','num8','num9',
+       'nummult','`'].includes(key);
   }
 
   // Alt+0 — open/close settings (use saved or default)

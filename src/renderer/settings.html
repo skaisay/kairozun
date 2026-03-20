@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="referrer" content="no-referrer">
   <title>Kairozun Settings</title>
   <link rel="stylesheet" href="settings.css">
 </head>
@@ -76,6 +77,13 @@
             <div class="info-row">
               <span class="info-desc" data-i18n="hotkeyOverlay">Show / Hide Overlay</span>
               <button class="hotkey-btn" id="hotkey-overlay" data-action="overlay">Ctrl+Shift+H</button>
+            </div>
+          </div>
+          <div class="section">
+            <label data-i18n="captureSettings">Screen Capture</label>
+            <div class="toggle-row">
+              <span data-i18n="showOnCapture">Show on screen recording</span>
+              <input type="checkbox" id="chk-capture">
             </div>
           </div>
         </div>
@@ -356,6 +364,13 @@
             </div>
             <div class="player-search-error hidden" id="player-search-error"></div>
           </div>
+          <div class="section hidden" id="search-history-section">
+            <div class="search-history-header">
+              <label id="search-history-label">Search History</label>
+              <button class="search-history-clear-btn" id="search-history-clear">Clear</button>
+            </div>
+            <div class="search-history-chips" id="search-history-chips"></div>
+          </div>
           <div class="section hidden" id="player-result-section">
             <div class="player-profile-card" id="player-profile-card">
               <div class="player-profile-header">
@@ -421,6 +436,8 @@
         <!-- TAB: System -->
         <div class="tab-panel" id="tab-system">
           <h2 data-i18n="navSystem">System</h2>
+
+          <!-- CPU & RAM bars -->
           <div class="section">
             <label data-i18n="systemMonitor">System Monitor</label>
             <div class="sys-row">
@@ -432,6 +449,83 @@
               <span>RAM</span>
               <div class="bar-wrap"><div class="bar bar-mem" id="mem-bar" style="width:0%"></div></div>
               <span id="mem-value">0%</span>
+            </div>
+          </div>
+
+          <!-- Hardware Info -->
+          <div class="section">
+            <label data-i18n="sysHardware">Hardware</label>
+            <div class="sys-info-grid">
+              <div class="sys-info-item">
+                <span class="sys-label" data-i18n="sysCpuModel">CPU</span>
+                <span class="sys-val" id="sys-cpu-model">--</span>
+              </div>
+              <div class="sys-info-item">
+                <span class="sys-label" data-i18n="sysCores">Cores</span>
+                <span class="sys-val" id="sys-cpu-cores">--</span>
+              </div>
+              <div class="sys-info-item">
+                <span class="sys-label" data-i18n="sysGpu">GPU</span>
+                <span class="sys-val" id="sys-gpu-name">--</span>
+              </div>
+              <div class="sys-info-item">
+                <span class="sys-label">VRAM</span>
+                <span class="sys-val" id="sys-gpu-vram">--</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Memory Details -->
+          <div class="section">
+            <label data-i18n="sysMemory">Memory</label>
+            <div class="sys-info-grid">
+              <div class="sys-info-item">
+                <span class="sys-label" data-i18n="sysTotal">Total</span>
+                <span class="sys-val" id="sys-mem-total">--</span>
+              </div>
+              <div class="sys-info-item">
+                <span class="sys-label" data-i18n="sysUsed">Used</span>
+                <span class="sys-val" id="sys-mem-used">--</span>
+              </div>
+              <div class="sys-info-item">
+                <span class="sys-label" data-i18n="sysFree">Free</span>
+                <span class="sys-val" id="sys-mem-free">--</span>
+              </div>
+              <div class="sys-info-item">
+                <span class="sys-label" data-i18n="sysAppMem">App Memory</span>
+                <span class="sys-val" id="sys-app-mem">--</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Disk Usage -->
+          <div class="section">
+            <label data-i18n="sysDisk">Disk</label>
+            <div id="sys-disks" class="sys-info-grid"></div>
+          </div>
+
+          <!-- Network -->
+          <div class="section">
+            <label data-i18n="sysNetwork">Network</label>
+            <div id="sys-network" class="sys-info-grid"></div>
+          </div>
+
+          <!-- System Info -->
+          <div class="section">
+            <label data-i18n="sysInfo">System Info</label>
+            <div class="sys-info-grid">
+              <div class="sys-info-item">
+                <span class="sys-label">OS</span>
+                <span class="sys-val" id="sys-os">--</span>
+              </div>
+              <div class="sys-info-item">
+                <span class="sys-label" data-i18n="sysHostname">Host</span>
+                <span class="sys-val" id="sys-hostname">--</span>
+              </div>
+              <div class="sys-info-item">
+                <span class="sys-label" data-i18n="sysUptime">Uptime</span>
+                <span class="sys-val" id="sys-uptime">--</span>
+              </div>
             </div>
           </div>
         </div>
@@ -452,7 +546,7 @@
               <div class="about-logo">K</div>
               <div class="about-header-text">
                 <div class="about-name">Kairozun</div>
-                <div class="about-version">v1.9.0</div>
+                <div class="about-version">v2.1.0</div>
               </div>
             </div>
             <div class="about-desc" data-i18n="aboutDesc">Roblox glass overlay with real-time game data, system monitoring, and draggable HUD panels.</div>
@@ -471,6 +565,43 @@
             <div class="about-qr">
               <img src="../../assets/qr-discord.png" alt="Discord QR" class="about-qr-img">
               <div class="about-qr-label" data-i18n="scanDiscord">Scan to join Discord</div>
+            </div>
+
+            <div class="about-compliance">
+              <div class="compliance-title" data-i18n="complianceTitle">Compliance & Safety</div>
+              <div class="compliance-text" data-i18n="complianceText">Kairozun is a safe external overlay that does not violate Roblox Terms of Use. The application does not inject code into Roblox, does not modify game memory, does not automate gameplay, and does not provide unfair advantages. It only reads publicly available log files and uses official Roblox public APIs.</div>
+              <div class="compliance-list">
+                <div class="compliance-item">
+                  <span class="compliance-icon">✓</span>
+                  <span data-i18n="complianceNoInject">Does not inject code or modify Roblox</span>
+                </div>
+                <div class="compliance-item">
+                  <span class="compliance-icon">✓</span>
+                  <span data-i18n="compliancePublicApi">Uses only official public Roblox APIs</span>
+                </div>
+                <div class="compliance-item">
+                  <span class="compliance-icon">✓</span>
+                  <span data-i18n="complianceNoCheat">Does not automate gameplay or provide cheats</span>
+                </div>
+                <div class="compliance-item">
+                  <span class="compliance-icon">✓</span>
+                  <span data-i18n="complianceExternal">Runs externally — does not touch game process</span>
+                </div>
+                <div class="compliance-item">
+                  <span class="compliance-icon">✓</span>
+                  <span data-i18n="complianceNoAuth">Does not require or store Roblox credentials</span>
+                </div>
+              </div>
+              <div class="compliance-links">
+                <a class="compliance-link" id="link-roblox-tos" title="Roblox Terms of Use">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                  <span data-i18n="linkRobloxTos">Roblox Terms of Use</span>
+                </a>
+                <a class="compliance-link" id="link-roblox-community" title="Community Standards">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                  <span data-i18n="linkCommunityStandards">Community Standards</span>
+                </a>
+              </div>
             </div>
           </div>
         </div>
