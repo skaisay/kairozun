@@ -975,13 +975,6 @@ function createOverlay() {
   overlayWindow.setIgnoreMouseEvents(true, { forward: true });
   overlayWindow.loadFile(path.join(__dirname, 'renderer', 'overlay.html'));
   overlayWindow.setAlwaysOnTop(true, 'screen-saver');
-
-  // Apply saved screen recording visibility
-  if (savedSettings && savedSettings.showOnCapture) {
-    overlayWindow.setContentProtection(false);
-  } else {
-    overlayWindow.setContentProtection(false);
-  }
 }
 
 function createSettingsWindow() {
@@ -1155,9 +1148,7 @@ ipcMain.on('update-settings', (_e, settings) => {
     overlayWindow.webContents.send('apply-settings', savedSettings);
   }
   // Apply capture mode setting
-  if (settings.showOnCapture !== undefined && overlayWindow && !overlayWindow.isDestroyed()) {
-    overlayWindow.setContentProtection(!settings.showOnCapture);
-  }
+  // (setContentProtection removed — triggers AV false positives)
 });
 
 ipcMain.on('close-settings', () => {
@@ -1288,11 +1279,9 @@ ipcMain.on('set-hotkey', (_e, { action, accelerator }) => {
   } catch { /* ignore invalid accelerator */ }
 });
 
-// Toggle screen recording visibility
+// Toggle screen recording visibility (disabled — setContentProtection triggers AV)
 ipcMain.on('set-capture-mode', (_e, visible) => {
-  if (overlayWindow && !overlayWindow.isDestroyed()) {
-    overlayWindow.setContentProtection(!visible);
-  }
+  // no-op
 });
 
 // Allow overlay to toggle mouse passthrough for dragging
