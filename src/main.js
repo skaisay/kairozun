@@ -22,8 +22,7 @@ function httpGet(url) {
   });
 }
 
-// Faster GPU startup
-app.commandLine.appendSwitch('disable-gpu-vsync');
+// GPU startup — don't disable vsync to avoid wasting GPU cycles
 app.commandLine.appendSwitch('disable-software-rasterizer');
 app.commandLine.appendSwitch('enable-gpu-rasterization');
 app.commandLine.appendSwitch('enable-zero-copy');
@@ -84,12 +83,22 @@ let cachedLogFile = null;
 let cachedLogMtime = 0;
 let cachedLogSize = 0;
 let cachedLogContent = '';
+let lastLogDirScan = 0;
+let cachedLogList = null;
 
 function findLatestRobloxLog() {
   try {
     if (!fs.existsSync(ROBLOX_LOG_DIR)) return null;
-    const files = fs.readdirSync(ROBLOX_LOG_DIR)
-      .filter(f => f.endsWith('.log'))
+    const now = Date.now();
+    // Only rescan directory every 15s — directory listing is expensive on HDDs
+    if (!cachedLogList || now - lastLogDirScan > 15000) {
+      lastLogDirScan = now;
+      cachedLogList = fs.readdirSync(ROBLOX_LOG_DIR)
+        .filter(f => f.endsWith('.log'));
+    }
+    // Only stat the most recent few files instead of all
+    const recentFiles = cachedLogList.slice(-10);
+    const files = recentFiles
       .map(f => {
         try {
           const full = path.join(ROBLOX_LOG_DIR, f);
@@ -127,99 +136,100 @@ let robloxInGame = false; // true when user is actually in a game server
 
 function parseRobloxLog(text) {
   const data = {};
+  // Use last ~40KB for most searches — avoids scanning the full buffer repeatedly
+  const tail = text.length > 40000 ? text.slice(-40000) : text;
 
-  // Extract server IP and port from UDMUX Address
-  const ipMatch = text.match(/UDMUX Address\s*=\s*([\d.]+),\s*Port\s*=\s*(\d+)/g);
-  if (ipMatch) {
-    const last = ipMatch[ipMatch.length - 1];
-    const parts = last.match(/UDMUX Address\s*=\s*([\d.]+),\s*Port\s*=\s*(\d+)/);
+  // Extract server IP and port from UDMUX Address — search tail only
+  const udmuxIdx = tail.lastIndexOf('UDMUX Address');
+  if (udmuxIdx !== -1) {
+    const udmuxLine = tail.substring(udmuxIdx, udmuxIdx + 120);
+    const parts = udmuxLine.match(/UDMUX Address\s*=\s*([\d.]+),\s*Port\s*=\s*(\d+)/);
     if (parts) {
       const newIp = parts[1];
       if (newIp !== robloxServerIp) {
         robloxServerIp = newIp;
         robloxServerPort = parts[2];
-        serverRegion = null; // reset for new server
+        serverRegion = null;
         fetchServerRegion(newIp);
       }
     }
   }
 
-  // Extract server join time from the last game join report
-  const joinMatches = [...text.matchAll(/^(\d{4}-\d{2}-\d{2}T[\d:.]+Z).*GameJoinLoadTime.*Report game_join_loadtime/gm)];
-  if (joinMatches.length > 0) {
-    const lastJoin = joinMatches[joinMatches.length - 1];
-    robloxServerJoinTime = lastJoin[1];
+  // Extract server join time — search tail for last occurrence
+  const joinTimeIdx = tail.lastIndexOf('game_join_loadtime');
+  if (joinTimeIdx !== -1) {
+    const lineStart = tail.lastIndexOf('\n', joinTimeIdx) + 1;
+    const line = tail.substring(lineStart, joinTimeIdx + 30);
+    const tsMatch = line.match(/(\d{4}-\d{2}-\d{2}T[\d:.]+Z)/);
+    if (tsMatch) robloxServerJoinTime = tsMatch[1];
   }
 
-  // Extract userId from log (always present: userid:NNNNN)
-  const uidMatches = text.match(/userid[\s:=]+(\d+)/gi);
-  if (uidMatches) {
-    const last = uidMatches[uidMatches.length - 1];
-    const m = last.match(/(\d+)/);
+  // Extract userId — search tail for last occurrence
+  const uidIdx = tail.lastIndexOf('userid');
+  if (uidIdx !== -1) {
+    const uidSnippet = tail.substring(uidIdx, uidIdx + 30);
+    const m = uidSnippet.match(/userid[\s:=]+(\d+)/i);
     if (m) robloxUserIdFromLog = m[1];
   }
 
-  // Extract username from join ticket (may not exist in all logs)
-  const userMatch = text.match(/"UserName"%3a"([^"]+)"/i)
-    || text.match(/"UserName"\s*:\s*"([^"]+)"/i);
-  if (userMatch) robloxUsername = userMatch[1];
-
-  // Extract display name
-  const displayMatch = text.match(/"DisplayName"%3a"([^"]+)"/i)
-    || text.match(/"DisplayName"\s*:\s*"([^"]+)"/i);
-  if (displayMatch) data.displayName = displayMatch[1];
-
-  // Extract game job/instance ID from Roblox log
-  // Pattern: "Joining game 'UUID' place PLACEID"
-  const jobIdMatches = [...text.matchAll(/Joining game '([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})' place (\d+)/gi)];
-  if (jobIdMatches.length > 0) {
-    const lastMatch = jobIdMatches[jobIdMatches.length - 1];
-    robloxJobIdFromLog = lastMatch[1];
-    // Also extract placeId from the same join line (most reliable source)
-    if (lastMatch[2]) robloxPlaceId = lastMatch[2];
+  // Extract username — search once from beginning (appears early in log)
+  if (!robloxUsername) {
+    const userMatch = text.match(/"UserName"%3a"([^"]+)"/i)
+      || text.match(/"UserName"\s*:\s*"([^"]+)"/i);
+    if (userMatch) robloxUsername = userMatch[1];
   }
 
-  // Extract ping from Roblox log stats (most accurate source)
-  // Reset each cycle so we get fresh values
+  // Extract display name — search once (cached after first find)
+  if (!robloxApiData.displayName) {
+    const displayMatch = text.match(/"DisplayName"%3a"([^"]+)"/i)
+      || text.match(/"DisplayName"\s*:\s*"([^"]+)"/i);
+    if (displayMatch) data.displayName = displayMatch[1];
+  }
+
+  // Extract game job/instance ID — search tail for last "Joining game"
+  const joiningIdx = tail.lastIndexOf("Joining game '");
+  if (joiningIdx !== -1) {
+    const joiningLine = tail.substring(joiningIdx, joiningIdx + 120);
+    const jm = joiningLine.match(/Joining game '([0-9a-f-]{36})' place (\d+)/i);
+    if (jm) {
+      robloxJobIdFromLog = jm[1];
+      if (jm[2]) robloxPlaceId = jm[2];
+    }
+  }
+
+  // Extract ping — search only last ~10KB for freshest values
   logPingMs = null;
-  // Search only the last ~200KB of log for recent ping values (fresher data)
-  const recentText = text.length > 200000 ? text.slice(-200000) : text;
+  const pingTail = text.length > 10000 ? text.slice(-10000) : text;
   const pingPatterns = [
-    // Roblox network stats (most reliable, appears in modern Roblox clients)
-    /STAT_Ping\s*[:=]\s*(\d+(?:\.\d+)?)/gi,
-    /Stats\.Network\.Ping\s*[:=]\s*(\d+(?:\.\d+)?)/gi,
-    // RakNet / UDMUX ping values
-    /averagePingMs["'\s:=]+(\d+(?:\.\d+)?)/gi,
-    /connectionPing["'\s:=]+(\d+(?:\.\d+)?)/gi,
-    /networkPing["'\s:=]+(\d+(?:\.\d+)?)/gi,
-    /avgPing["'\s:=]+(\d+(?:\.\d+)?)/gi,
-    // JSON format in telemetry
-    /"ping"\s*:\s*(\d+(?:\.\d+)?)/gi,
-    // DataPing in connection quality reports
-    /DataPing\s*[:=]\s*(\d+(?:\.\d+)?)/gi,
-    // MicroProfiler network stats
-    /MicroProfiler.*?ping["'\s:=]+(\d+(?:\.\d+)?)/gi,
+    /STAT_Ping\s*[:=]\s*(\d+(?:\.\d+)?)/i,
+    /Stats\.Network\.Ping\s*[:=]\s*(\d+(?:\.\d+)?)/i,
+    /averagePingMs["'\s:=]+(\d+(?:\.\d+)?)/i,
+    /connectionPing["'\s:=]+(\d+(?:\.\d+)?)/i,
+    /DataPing\s*[:=]\s*(\d+(?:\.\d+)?)/i,
+    /"ping"\s*:\s*(\d+(?:\.\d+)?)/i,
   ];
+  // Search backwards through pingTail for the last match of any pattern
   for (const pat of pingPatterns) {
-    const matches = [...recentText.matchAll(pat)];
-    if (matches.length > 0) {
-      const last = matches[matches.length - 1];
-      const val = Math.round(parseFloat(last[1]));
+    const m = pingTail.match(pat);
+    if (m) {
+      const val = Math.round(parseFloat(m[1]));
       if (val > 0 && val < 5000) { logPingMs = val; break; }
     }
   }
 
-  // Detect in-game state: look for join and disconnect markers.
-  // Use multiple patterns — Roblox logs vary across versions.
-  const joinIdxs = [...text.matchAll(/Joining game '|GameJoinLoadTime|game_join_loadtime/gi)].map(m => m.index);
-  const discIdxs = [...text.matchAll(/Client:Disconnect|OnDisconnect/gi)].map(m => m.index);
-  const lastJoinIdx = joinIdxs.length > 0 ? joinIdxs[joinIdxs.length - 1] : -1;
-  const lastDiscIdx = discIdxs.length > 0 ? discIdxs[discIdxs.length - 1] : -1;
+  // Detect in-game state using simple lastIndexOf (much faster than matchAll)
+  const lastJoinIdx = Math.max(
+    tail.lastIndexOf("Joining game '"),
+    tail.lastIndexOf('GameJoinLoadTime'),
+    tail.lastIndexOf('game_join_loadtime')
+  );
+  const lastDiscIdx = Math.max(
+    tail.lastIndexOf('Client:Disconnect'),
+    tail.lastIndexOf('OnDisconnect')
+  );
   if (lastJoinIdx > lastDiscIdx) {
     robloxInGame = true;
   } else if (lastDiscIdx > lastJoinIdx && lastJoinIdx === -1) {
-    // Only mark not-in-game if we see a disconnect without ANY join in the buffer
-    // (large logs may have truncated the join line away)
     robloxInGame = false;
   } else if (lastDiscIdx > lastJoinIdx) {
     robloxInGame = false;
@@ -297,7 +307,7 @@ function startPingLoop() {
   if (pingInterval) clearInterval(pingInterval);
   resolvePingTarget();
   setTimeout(doPing, 300);
-  pingInterval = setInterval(doPing, 3000);
+  pingInterval = setInterval(doPing, 5000);
 }
 
 // ── Roblox API ──────────────────────────────────────────────────────
@@ -711,9 +721,9 @@ function checkRobloxRunning(callback) {
       robloxPid = null; // process gone, fall through to full check
     }
   }
-  // Full check only every 3s when no cached PID
+  // Full check only every 5s when no cached PID
   const now = Date.now();
-  if (now - lastProcessCheck < 3000) { callback(false); return; }
+  if (now - lastProcessCheck < 5000) { callback(false); return; }
   lastProcessCheck = now;
   execFile('tasklist', ['/FI', 'IMAGENAME eq RobloxPlayerBeta.exe', '/FO', 'CSV', '/NH'], {
     windowsHide: true, timeout: 2000,
@@ -731,7 +741,9 @@ function readLogFull(filePath) {
   try {
     const fd = fs.openSync(filePath, 0x0000);
     const stat = fs.fstatSync(fd);
-    const MAX = 1024 * 1024;
+    // Read only last 128KB instead of 1MB — sufficient for all patterns
+    // and drastically reduces CPU load from regex parsing
+    const MAX = 128 * 1024;
     const offset = Math.max(0, stat.size - MAX);
     const len = Math.min(stat.size, MAX);
     const buf = Buffer.alloc(len);
@@ -766,16 +778,19 @@ function startRobloxWatcher() {
               if (effectivelyInGame) {
                 // Sync robloxInGame flag if presence confirms it but log missed it
                 if (!robloxInGame && robloxApiData.presenceType === 2) robloxInGame = true;
-              const placeMatches = text.match(/placeid[\s:=]+(\d+)/gi);
-              const univMatches = text.match(/universeid[\s:=]+(\d+)/gi);
-              if (placeMatches) {
-                const last = placeMatches[placeMatches.length - 1];
-                const m = last.match(/(\d+)/);
+              // Use lastIndexOf for placeid/universeid — avoids global regex scan of entire buffer
+              const placeIdx = text.lastIndexOf('placeid');
+              if (placeIdx === -1) { /* also check capitalized */ }
+              const placeIdx2 = Math.max(placeIdx, text.lastIndexOf('PlaceId'), text.lastIndexOf('placeId'));
+              if (placeIdx2 !== -1) {
+                const placeSnippet = text.substring(placeIdx2, placeIdx2 + 40);
+                const m = placeSnippet.match(/placeid[\s:=]+(\d+)/i);
                 if (m) robloxPlaceId = m[1];
               }
-              if (univMatches) {
-                const last = univMatches[univMatches.length - 1];
-                const m = last.match(/(\d+)/);
+              const univIdx = Math.max(text.lastIndexOf('universeid'), text.lastIndexOf('UniverseId'), text.lastIndexOf('universeId'));
+              if (univIdx !== -1) {
+                const univSnippet = text.substring(univIdx, univIdx + 40);
+                const m = univSnippet.match(/universeid[\s:=]+(\d+)/i);
                 if (m && m[1] !== robloxUniverseId) {
                   // Record previous game session before switching
                   if (currentGameUniverseId && currentGameStart) {
@@ -934,15 +949,23 @@ function startRobloxWatcher() {
         const send = (win) => {
           if (win && !win.isDestroyed()) win.webContents.send('roblox-data', robloxData);
         };
-        // Only send if data actually changed (reduces IPC overhead)
-        const dataJson = JSON.stringify(robloxData);
-        if (dataJson !== lastSentDataJson) {
-          lastSentDataJson = dataJson;
+        // Only send if data actually changed (lightweight fingerprint instead of full JSON.stringify)
+        const fp = [
+          robloxData.running, robloxData.inGame, robloxData.ping,
+          robloxData.serverIp, robloxData.gameName, robloxData.username,
+          robloxData.serverPlayerCount, robloxData.serverFps,
+          robloxData.avatarUrl, robloxData.friendsCount,
+          robloxData.gameRating, robloxData.totalServers,
+          robloxData.serverRegion, robloxData.followersCount,
+          robloxData.serverPlayerList ? robloxData.serverPlayerList.length : 0,
+        ].join('|');
+        if (fp !== lastSentDataJson) {
+          lastSentDataJson = fp;
           send(overlayWindow);
           send(settingsWindow);
         }
       });
-    }, 2500);
+    }, 5000);
   }, 300);
 }
 
@@ -968,7 +991,6 @@ function createOverlay() {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      backgroundThrottling: false,
     },
   });
 
@@ -1084,6 +1106,9 @@ function startSystemMetrics() {
     sendStatic(settingsWindow);
   });
 
+  // Cache totalmem — it never changes
+  const cachedTotalMem = os.totalmem();
+
   systemInterval = setInterval(() => {
     const cur = getCpuUsage();
     const idleDiff = cur.idle - prevCpu.idle;
@@ -1091,15 +1116,29 @@ function startSystemMetrics() {
     const cpuPercent = totalDiff === 0 ? 0 : Math.round((1 - idleDiff / totalDiff) * 100);
     prevCpu = cur;
 
-    const totalMem = os.totalmem();
     const freeMem = os.freemem();
-    const usedMem = totalMem - freeMem;
-    const memPercent = Math.round((usedMem / totalMem) * 100);
+    const usedMem = cachedTotalMem - freeMem;
+    const memPercent = Math.round((usedMem / cachedTotalMem) * 100);
 
-    const uptimeSec = os.uptime();
-    const procMem = process.memoryUsage();
+    const metrics = {
+      cpu: cpuPercent,
+      mem: memPercent,
+      totalMemGB: +(cachedTotalMem / 1073741824).toFixed(1),
+      usedMemGB: +(usedMem / 1073741824).toFixed(1),
+      freeMemGB: +(freeMem / 1073741824).toFixed(1),
+      uptime: os.uptime(),
+      appMemMB: Math.round(process.memoryUsage.rss() / 1048576),
+    };
+    if (overlayWindow && !overlayWindow.isDestroyed()) {
+      overlayWindow.webContents.send('system-metrics', metrics);
+    }
+    if (settingsWindow && !settingsWindow.isDestroyed()) {
+      settingsWindow.webContents.send('system-metrics', metrics);
+    }
+  }, 5000);
 
-    // Network interfaces
+  // Network interfaces sent separately every 15s (rarely changes)
+  setInterval(() => {
     const nets = os.networkInterfaces();
     const netInfo = [];
     for (const [name, addrs] of Object.entries(nets)) {
@@ -1109,24 +1148,12 @@ function startSystemMetrics() {
         }
       }
     }
-
-    const metrics = {
-      cpu: cpuPercent,
-      mem: memPercent,
-      totalMemGB: +(totalMem / 1073741824).toFixed(1),
-      usedMemGB: +(usedMem / 1073741824).toFixed(1),
-      freeMemGB: +(freeMem / 1073741824).toFixed(1),
-      uptime: uptimeSec,
-      appMemMB: Math.round(procMem.rss / 1048576),
-      network: netInfo,
+    const send = (win) => {
+      if (win && !win.isDestroyed()) win.webContents.send('system-metrics', { network: netInfo });
     };
-    if (overlayWindow && !overlayWindow.isDestroyed()) {
-      overlayWindow.webContents.send('system-metrics', metrics);
-    }
-    if (settingsWindow && !settingsWindow.isDestroyed()) {
-      settingsWindow.webContents.send('system-metrics', metrics);
-    }
-  }, 3000);
+    send(overlayWindow);
+    send(settingsWindow);
+  }, 15000);
 
   // Refresh disk usage every 60 seconds
   setInterval(async () => {

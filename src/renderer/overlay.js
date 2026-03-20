@@ -76,6 +76,39 @@ const gameIcon = document.getElementById('game-icon');
 const serverIpEl = document.getElementById('server-ip');
 const visitsValue = document.getElementById('visits-value');
 
+// Cache frequently accessed DOM elements to avoid repeated getElementById calls
+const followersValueEl = document.getElementById('followers-value');
+const followersRowEl = document.getElementById('followers-row');
+const accountAgeValueEl = document.getElementById('account-age-value');
+const accountAgeRowEl = document.getElementById('account-age-row');
+const gameRowEl = document.getElementById('game-row');
+const creatorValueEl = document.getElementById('creator-value');
+const creatorRowEl = document.getElementById('creator-row');
+const playersRowEl = document.getElementById('players-row');
+const onlineValueEl = document.getElementById('online-value');
+const onlineRowEl = document.getElementById('online-row');
+const serverFpsValueEl = document.getElementById('server-fps-value');
+const serverFpsRowEl = document.getElementById('server-fps-row');
+const fpsSrvPartEl = document.getElementById('fps-srv-part');
+const serverRowEl = document.getElementById('server-row');
+const regionValueEl = document.getElementById('region-value');
+const regionRowEl = document.getElementById('region-row');
+const uptimeValueEl = document.getElementById('uptime-value');
+const uptimeRowEl = document.getElementById('uptime-row');
+const visitsRowEl = document.getElementById('visits-row');
+const favsValueEl = document.getElementById('favs-value');
+const favsRowEl = document.getElementById('favs-row');
+const genreValueEl = document.getElementById('genre-value');
+const genreRowEl = document.getElementById('genre-row');
+const ratingValueEl = document.getElementById('rating-value');
+const ratingRowEl = document.getElementById('rating-row');
+const serversValueEl = document.getElementById('servers-value');
+const serversRowEl = document.getElementById('servers-row');
+const panelMl = document.getElementById('panel-ml');
+const playerListCountEl = document.getElementById('player-list-count');
+const playerAvatarGridEl = document.getElementById('player-avatar-grid');
+const usernameEl = document.getElementById('username');
+
 // Cache last known good avatar URL to prevent flickering/disappearing
 let cachedAvatarUrl = null;
 
@@ -104,6 +137,7 @@ gameIcon.addEventListener('error', () => {
 let overlayFps = 0;
 let frames = 0;
 let lastFpsTime = performance.now();
+let fpsRafActive = false;
 
 function fpsLoop() {
   frames++;
@@ -113,9 +147,21 @@ function fpsLoop() {
     frames = 0;
     lastFpsTime = now;
   }
-  requestAnimationFrame(fpsLoop);
+  // Only keep rAF running when we need overlay FPS (no Roblox data)
+  if (lastRobloxFps == null) {
+    requestAnimationFrame(fpsLoop);
+  } else {
+    fpsRafActive = false;
+  }
 }
-requestAnimationFrame(fpsLoop);
+
+// Start rAF only when needed
+function ensureFpsLoop() {
+  if (!fpsRafActive) {
+    fpsRafActive = true;
+    requestAnimationFrame(fpsLoop);
+  }
+}
 
 // ── FPS color coding ─────────────────────────────────────────────────
 function setFpsColor(el, fps) {
@@ -161,9 +207,8 @@ window.kairozun.onRobloxData((data) => {
     fpsEl.textContent = data.fps;
     setFpsColor(fpsEl, data.fps);
     // Update combined display if server FPS is already known
-    const srvPart = document.getElementById('fps-srv-part');
-    if (srvPart && !srvPart.classList.contains('hidden')) {
-      srvPart.textContent = ' — ' + (srvPart.dataset.srvFps || '--') + ' srv';
+    if (fpsSrvPartEl && !fpsSrvPartEl.classList.contains('hidden')) {
+      fpsSrvPartEl.textContent = ' — ' + (fpsSrvPartEl.dataset.srvFps || '--') + ' srv';
     }
   }
 
@@ -176,7 +221,7 @@ window.kairozun.onRobloxData((data) => {
   // Username from logs or API
   if (data.username) {
     const display = data.displayName || data.username;
-    document.getElementById('username').textContent = display;
+    usernameEl.textContent = display;
     avatarLetter.textContent = display.charAt(0).toUpperCase();
   }
 
@@ -198,8 +243,8 @@ window.kairozun.onRobloxData((data) => {
 
   // Followers count
   if (data.followersCount != null) {
-    document.getElementById('followers-value').textContent = formatNumber(data.followersCount);
-    document.getElementById('followers-row').classList.remove('hidden');
+    followersValueEl.textContent = formatNumber(data.followersCount);
+    followersRowEl.classList.remove('hidden');
   }
 
   // Account age
@@ -218,19 +263,19 @@ window.kairozun.onRobloxData((data) => {
     } else {
       ageText = days + (currentLang === 'ru' ? 'д' : 'd');
     }
-    document.getElementById('account-age-value').textContent = ageText;
-    document.getElementById('account-age-row').classList.remove('hidden');
+    accountAgeValueEl.textContent = ageText;
+    accountAgeRowEl.classList.remove('hidden');
   }
 
   // Game info
   if (data.gameName) {
     gameName.textContent = data.gameName;
     if (data.gameDescription) gameName.title = data.gameDescription.substring(0, 200);
-    if (widgetToggles.showGame) document.getElementById('game-row').classList.remove('hidden');
+    if (widgetToggles.showGame) gameRowEl.classList.remove('hidden');
   }
   if (data.gameCreator) {
-    document.getElementById('creator-value').textContent = data.gameCreator;
-    if (widgetToggles.showGame) document.getElementById('creator-row').classList.remove('hidden');
+    creatorValueEl.textContent = data.gameCreator;
+    if (widgetToggles.showGame) creatorRowEl.classList.remove('hidden');
   }
   if (data.gameIcon && gameIcon.src !== data.gameIcon) {
     gameIcon.src = data.gameIcon;
@@ -238,35 +283,33 @@ window.kairozun.onRobloxData((data) => {
   }
   if (data.serverPlayerCount != null) {
     playersValue.textContent = data.serverPlayerCount + (data.serverMaxPlayers ? '/' + data.serverMaxPlayers : '');
-    if (widgetToggles.showPlayers) document.getElementById('players-row').classList.remove('hidden');
+    if (widgetToggles.showPlayers) playersRowEl.classList.remove('hidden');
   } else if (data.gamePlaying != null) {
     playersValue.textContent = data.gamePlaying + (data.gameMaxPlayers ? '/' + data.gameMaxPlayers : '');
-    if (widgetToggles.showPlayers) document.getElementById('players-row').classList.remove('hidden');
+    if (widgetToggles.showPlayers) playersRowEl.classList.remove('hidden');
   }
   // Total online in game
   if (data.gamePlaying != null) {
-    document.getElementById('online-value').textContent = formatNumber(data.gamePlaying) + ' online';
-    document.getElementById('online-row').classList.remove('hidden');
+    onlineValueEl.textContent = formatNumber(data.gamePlaying) + ' online';
+    onlineRowEl.classList.remove('hidden');
   }
   // Server FPS — show in game info panel and inline in FPS widget
   if (data.serverFps != null) {
-    document.getElementById('server-fps-value').textContent = data.serverFps + ' srv fps';
-    document.getElementById('server-fps-row').classList.remove('hidden');
-    // Show inline in top-left FPS row: "120 — 60 srv"
-    const srvPart = document.getElementById('fps-srv-part');
-    if (srvPart) {
-      srvPart.dataset.srvFps = data.serverFps;
-      srvPart.textContent = ' — ' + data.serverFps + ' srv';
-      srvPart.classList.remove('hidden');
+    serverFpsValueEl.textContent = data.serverFps + ' srv fps';
+    serverFpsRowEl.classList.remove('hidden');
+    if (fpsSrvPartEl) {
+      fpsSrvPartEl.dataset.srvFps = data.serverFps;
+      fpsSrvPartEl.textContent = ' — ' + data.serverFps + ' srv';
+      fpsSrvPartEl.classList.remove('hidden');
     }
   }
   if (data.serverIp) {
     serverIpEl.textContent = data.serverIp;
-    if (widgetToggles.showServer) document.getElementById('server-row').classList.remove('hidden');
+    if (widgetToggles.showServer) serverRowEl.classList.remove('hidden');
   }
   if (data.serverRegion) {
-    document.getElementById('region-value').textContent = data.serverRegion;
-    if (widgetToggles.showRegion) document.getElementById('region-row').classList.remove('hidden');
+    regionValueEl.textContent = data.serverRegion;
+    if (widgetToggles.showRegion) regionRowEl.classList.remove('hidden');
   }
   if (data.serverJoinTime) {
     const elapsed = Math.floor((Date.now() - new Date(data.serverJoinTime).getTime()) / 1000);
@@ -274,74 +317,70 @@ window.kairozun.onRobloxData((data) => {
       const h = Math.floor(elapsed / 3600);
       const m = Math.floor((elapsed % 3600) / 60);
       const s = elapsed % 60;
-      document.getElementById('uptime-value').textContent = h > 0
+      uptimeValueEl.textContent = h > 0
         ? h + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0')
         : m + ':' + String(s).padStart(2, '0');
-      if (widgetToggles.showUptime) document.getElementById('uptime-row').classList.remove('hidden');
+      if (widgetToggles.showUptime) uptimeRowEl.classList.remove('hidden');
     }
   }
   if (data.gameVisits != null) {
     visitsValue.textContent = formatNumber(data.gameVisits);
-    if (widgetToggles.showVisits) document.getElementById('visits-row').classList.remove('hidden');
+    if (widgetToggles.showVisits) visitsRowEl.classList.remove('hidden');
   }
   if (data.gameFavorites != null) {
-    const favsEl = document.getElementById('favs-value');
-    const favsRow = document.getElementById('favs-row');
-    if (favsEl) favsEl.textContent = formatNumber(data.gameFavorites);
-    if (favsRow && widgetToggles.showFavorites) favsRow.classList.remove('hidden');
+    if (favsValueEl) favsValueEl.textContent = formatNumber(data.gameFavorites);
+    if (favsRowEl && widgetToggles.showFavorites) favsRowEl.classList.remove('hidden');
   }
 
   // Genre
   if (data.gameGenre) {
-    document.getElementById('genre-value').textContent = data.gameGenre;
-    if (widgetToggles.showGenre) document.getElementById('genre-row').classList.remove('hidden');
+    genreValueEl.textContent = data.gameGenre;
+    if (widgetToggles.showGenre) genreRowEl.classList.remove('hidden');
   }
 
   // Rating
   if (data.gameRating != null) {
-    document.getElementById('rating-value').textContent = data.gameRating + '%';
-    if (widgetToggles.showRating) document.getElementById('rating-row').classList.remove('hidden');
+    ratingValueEl.textContent = data.gameRating + '%';
+    if (widgetToggles.showRating) ratingRowEl.classList.remove('hidden');
   }
 
   // Servers
   if (data.totalServers != null) {
-    document.getElementById('servers-value').textContent = data.totalServers + ' srv';
-    document.getElementById('servers-row').classList.remove('hidden');
+    serversValueEl.textContent = data.totalServers + ' srv';
+    serversRowEl.classList.remove('hidden');
   }
 
   // Player list (names + avatars from serverPlayerList)
   if (data.serverPlayerList && data.serverPlayerList.length > 0) {
     renderPlayerList(data.serverPlayerList, data.serverPlayerCount || data.serverPlayerList.length);
-    if (widgetToggles.showPlayerList) document.getElementById('panel-ml').classList.remove('panel-hidden');
+    if (widgetToggles.showPlayerList) panelMl.classList.remove('panel-hidden');
   } else if (data.serverPlayerCount > 0 && widgetToggles.showPlayerList) {
-    document.getElementById('player-list-count').textContent = data.serverPlayerCount;
-    document.getElementById('panel-ml').classList.remove('panel-hidden');
+    playerListCountEl.textContent = data.serverPlayerCount;
+    panelMl.classList.remove('panel-hidden');
   }
 
   // When Roblox is offline or not in game, hide game info
   // But only if we ALSO have no game data (prevents false negatives from log truncation)
   const hasGameData = !!(data.gameName || data.serverPlayerCount || data.placeId);
   if (!data.running || (!data.inGame && !hasGameData)) {
-    document.getElementById('game-row').classList.add('hidden');
-    document.getElementById('creator-row').classList.add('hidden');
-    document.getElementById('players-row').classList.add('hidden');
-    document.getElementById('server-row').classList.add('hidden');
-    document.getElementById('visits-row').classList.add('hidden');
-    const favsRow = document.getElementById('favs-row');
-    if (favsRow) favsRow.classList.add('hidden');
-    document.getElementById('genre-row').classList.add('hidden');
-    document.getElementById('rating-row').classList.add('hidden');
-    document.getElementById('servers-row').classList.add('hidden');
-    document.getElementById('online-row').classList.add('hidden');
-    document.getElementById('server-fps-row').classList.add('hidden');
-    const srvPart = document.getElementById('fps-srv-part');
-    if (srvPart) { srvPart.classList.add('hidden'); srvPart.textContent = ''; }
-    document.getElementById('region-row').classList.add('hidden');
-    document.getElementById('uptime-row').classList.add('hidden');
-    document.getElementById('followers-row').classList.add('hidden');
-    document.getElementById('account-age-row').classList.add('hidden');
-    document.getElementById('panel-ml').classList.add('panel-hidden');
-    document.getElementById('player-avatar-grid').innerHTML = '';
+    gameRowEl.classList.add('hidden');
+    creatorRowEl.classList.add('hidden');
+    playersRowEl.classList.add('hidden');
+    serverRowEl.classList.add('hidden');
+    visitsRowEl.classList.add('hidden');
+    if (favsRowEl) favsRowEl.classList.add('hidden');
+    genreRowEl.classList.add('hidden');
+    ratingRowEl.classList.add('hidden');
+    serversRowEl.classList.add('hidden');
+    onlineRowEl.classList.add('hidden');
+    serverFpsRowEl.classList.add('hidden');
+    if (fpsSrvPartEl) { fpsSrvPartEl.classList.add('hidden'); fpsSrvPartEl.textContent = ''; }
+    regionRowEl.classList.add('hidden');
+    uptimeRowEl.classList.add('hidden');
+    followersRowEl.classList.add('hidden');
+    accountAgeRowEl.classList.add('hidden');
+    panelMl.classList.add('panel-hidden');
+    playerAvatarGridEl.innerHTML = '';
     gameIcon.classList.add('hidden');
     friendsValue.textContent = '--';
     // Only hide avatar if truly offline (no cached URL)
@@ -355,6 +394,7 @@ window.kairozun.onRobloxData((data) => {
 // Fallback: if no Roblox data, show overlay FPS
 setInterval(() => {
   if (lastRobloxFps == null) {
+    ensureFpsLoop();
     fpsEl.textContent = overlayFps;
     setFpsColor(fpsEl, overlayFps);
   }
@@ -396,15 +436,13 @@ const MAX_PLAYERS_SHOWN = 20;
 let lastPlayerListKey = '';
 
 function renderPlayerList(players, totalCount) {
-  const grid = document.getElementById('player-avatar-grid');
-  const countEl = document.getElementById('player-list-count');
-  countEl.textContent = totalCount;
+  playerListCountEl.textContent = totalCount;
 
   const key = players.map(p => p.userId + ':' + (p.avatarUrl || '') + ':' + (p.isAnon ? 'a' : 'k')).join(',');
   if (key === lastPlayerListKey) return;
   lastPlayerListKey = key;
 
-  grid.innerHTML = '';
+  playerAvatarGridEl.innerHTML = '';
   const shown = players.slice(0, MAX_PLAYERS_SHOWN);
   const frag = document.createDocumentFragment();
   for (const p of shown) {
@@ -448,7 +486,7 @@ function renderPlayerList(players, totalCount) {
     more.textContent = '+' + (totalCount - shown.length);
     frag.appendChild(more);
   }
-  grid.appendChild(frag);
+  playerAvatarGridEl.appendChild(frag);
 }
 
 // Fallback: anonymous avatar thumbnails (when serverPlayerList unavailable)
@@ -456,15 +494,13 @@ const MAX_AVATARS = 25;
 let lastAvatarUrls = [];
 
 function renderPlayerAvatarsAnon(avatars, totalCount) {
-  const grid = document.getElementById('player-avatar-grid');
-  const countEl = document.getElementById('player-list-count');
-  countEl.textContent = totalCount;
+  playerListCountEl.textContent = totalCount;
 
   const key = avatars.join(',');
   if (key === lastAvatarUrls.join(',')) return;
   lastAvatarUrls = avatars.slice();
 
-  grid.innerHTML = '';
+  playerAvatarGridEl.innerHTML = '';
   const shown = avatars.slice(0, MAX_AVATARS);
   const frag = document.createDocumentFragment();
   for (const url of shown) {
@@ -485,7 +521,7 @@ function renderPlayerAvatarsAnon(avatars, totalCount) {
     more.textContent = '+' + (totalCount - shown.length);
     frag.appendChild(more);
   }
-  grid.appendChild(frag);
+  playerAvatarGridEl.appendChild(frag);
 }
 
 // ── Auto-hide empty panels ───────────────────────────────────────────
