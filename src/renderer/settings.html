@@ -78,12 +78,36 @@
               <span class="info-desc" data-i18n="hotkeyOverlay">Show / Hide Overlay</span>
               <button class="hotkey-btn" id="hotkey-overlay" data-action="overlay">Ctrl+Shift+H</button>
             </div>
+            <div class="info-row">
+              <span class="info-desc" data-i18n="hotkeyScreenshot">Screenshot</span>
+              <button class="hotkey-btn" id="hotkey-screenshot" data-action="screenshot">F9</button>
+            </div>
+            <div class="info-row">
+              <span class="info-desc" data-i18n="hotkeyRecording">Screen Recording</span>
+              <button class="hotkey-btn" id="hotkey-recording" data-action="recording">F10</button>
+            </div>
           </div>
           <div class="section">
             <label data-i18n="captureSettings">Screen Capture</label>
             <div class="toggle-row">
               <span data-i18n="showOnCapture">Show on screen recording</span>
               <input type="checkbox" id="chk-capture">
+            </div>
+            <div class="toggle-row">
+              <span data-i18n="recordingDuration">Recording duration</span>
+              <select id="sel-rec-duration" class="settings-select">
+                <option value="5">5s</option>
+                <option value="30" selected>30s</option>
+                <option value="60">1 min</option>
+              </select>
+            </div>
+            <div class="toggle-row">
+              <span data-i18n="recordingQuality">Quality</span>
+              <select id="sel-rec-quality" class="settings-select">
+                <option value="max" data-i18n-opt="qualityMax">Maximum</option>
+                <option value="high" selected data-i18n-opt="qualityHigh">High</option>
+                <option value="medium" data-i18n-opt="qualityMedium">Medium</option>
+              </select>
             </div>
           </div>
         </div>

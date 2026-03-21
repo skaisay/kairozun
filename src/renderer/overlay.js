@@ -404,6 +404,123 @@ setInterval(() => {
   }
 }, 1000);
 
+// ── Screenshot notification ─────────────────────────────────────────
+window.kairozun.onScreenshotTaken(() => {
+  // Brief white flash + fade to confirm capture
+  const flash = document.createElement('div');
+  flash.style.cssText = 'position:fixed;inset:0;background:rgba(255,255,255,0.18);z-index:99999;pointer-events:none;transition:opacity 0.4s ease';
+  document.body.appendChild(flash);
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => { flash.style.opacity = '0'; });
+  });
+  setTimeout(() => flash.remove(), 500);
+});
+
+// ── Screen Recording ────────────────────────────────────────────────
+let mediaRecorder = null;
+let recordedChunks = [];
+let recTimerInterval = null;
+let recStartTime = 0;
+
+const recIndicator = document.getElementById('rec-indicator');
+const recTimerEl = document.getElementById('rec-timer');
+
+function updateRecTimer() {
+  const elapsed = Math.floor((Date.now() - recStartTime) / 1000);
+  const m = Math.floor(elapsed / 60);
+  const s = elapsed % 60;
+  recTimerEl.textContent = m + ':' + String(s).padStart(2, '0');
+}
+
+function stopRecording() {
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    mediaRecorder.stop();
+  }
+}
+
+// Quality presets: bitrate & fps
+const QUALITY_PRESETS = {
+  max:    { fps: 60, bitrate: 50_000_000 },
+  high:   { fps: 60, bitrate: 25_000_000 },
+  medium: { fps: 30, bitrate: 10_000_000 },
+};
+
+window.kairozun.onStartRecording(async ({ sourceId, width, height, duration, quality, showOverlay }) => {
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') return;
+
+  const preset = QUALITY_PRESETS[quality] || QUALITY_PRESETS.high;
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: {
+        mandatory: {
+          chromeMediaSource: 'desktop',
+          chromeMediaSourceId: sourceId,
+          minWidth: width,
+          maxWidth: width,
+          minHeight: height,
+          maxHeight: height,
+          minFrameRate: preset.fps,
+          maxFrameRate: preset.fps,
+        },
+      },
+    });
+
+    // Prefer H264 (hardware-accelerated) over VP9 (CPU-heavy)
+    let mimeType = 'video/webm;codecs=h264';
+    if (!MediaRecorder.isTypeSupported(mimeType)) {
+      mimeType = 'video/webm;codecs=vp8';
+    }
+    if (!MediaRecorder.isTypeSupported(mimeType)) {
+      mimeType = 'video/webm';
+    }
+
+    recordedChunks = [];
+    mediaRecorder = new MediaRecorder(stream, {
+      mimeType,
+      videoBitsPerSecond: preset.bitrate,
+    });
+
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) recordedChunks.push(e.data);
+    };
+
+    mediaRecorder.onstop = async () => {
+      stream.getTracks().forEach(t => t.stop());
+      clearInterval(recTimerInterval);
+      recIndicator.classList.add('hidden');
+      window.kairozun.recordingState(false);
+
+      if (recordedChunks.length > 0) {
+        const blob = new Blob(recordedChunks, { type: 'video/webm' });
+        const arrayBuf = await blob.arrayBuffer();
+        window.kairozun.saveRecording(new Uint8Array(arrayBuf));
+      }
+      recordedChunks = [];
+      mediaRecorder = null;
+    };
+
+    mediaRecorder.start(1000);
+    recStartTime = Date.now();
+    recTimerEl.textContent = '0:00';
+    recIndicator.classList.remove('hidden');
+    window.kairozun.recordingState(true);
+    recTimerInterval = setInterval(updateRecTimer, 1000);
+
+    // Auto-stop after duration
+    setTimeout(() => {
+      stopRecording();
+    }, duration * 1000);
+  } catch {
+    window.kairozun.recordingState(false);
+  }
+});
+
+window.kairozun.onStopRecording(() => {
+  stopRecording();
+});
+
 // ── System Metrics (from main process) ───────────────────────────────
 window.kairozun.onSystemMetrics(({ cpu, mem }) => {
   cpuBar.style.width = cpu + '%';

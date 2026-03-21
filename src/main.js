@@ -1,8 +1,8 @@
-const { app, BrowserWindow, ipcMain, screen, globalShortcut, Tray, Menu, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, screen, globalShortcut, Tray, Menu, shell, desktopCapturer } = require('electron');
 const path = require('path');
 const os = require('os');
 const fs = require('fs');
-const { execFile } = require('child_process');
+const { execFile, execSync, spawn: spawnProcess } = require('child_process');
 const http = require('http');
 const https = require('https');
 const net = require('net');
@@ -26,6 +26,91 @@ function httpGet(url) {
 app.commandLine.appendSwitch('disable-software-rasterizer');
 app.commandLine.appendSwitch('enable-gpu-rasterization');
 app.commandLine.appendSwitch('enable-zero-copy');
+
+// ── Auto-installer ──────────────────────────────────────────────────
+// When running from outside AppData\Local\Kairozun (e.g. Downloads),
+// copies the app to AppData, creates shortcuts, and relaunches.
+function writeUninstallScript(filePath) {
+  const script = [
+    '$ErrorActionPreference = "SilentlyContinue"',
+    '$AppName = "Kairozun"',
+    'Remove-Item "$env:LOCALAPPDATA\\$AppName" -Recurse -Force',
+    'Remove-Item "$([Environment]::GetFolderPath(\'Desktop\'))\\$AppName.lnk" -Force',
+    'Remove-Item "$env:APPDATA\\Microsoft\\Windows\\Start Menu\\Programs\\$AppName" -Recurse -Force',
+    'Write-Host "Kairozun has been uninstalled."',
+    'pause',
+  ].join('\r\n');
+  try { fs.writeFileSync(filePath, script, 'utf8'); } catch { /* ignore */ }
+}
+
+function ensureInstalled() {
+  if (!app.isPackaged) return; // skip in dev mode
+
+  const appName = 'Kairozun';
+  const installDir = path.join(process.env.LOCALAPPDATA, appName);
+  const currentExe = process.execPath;
+  const currentDir = path.dirname(currentExe);
+  const installedExe = path.join(installDir, path.basename(currentExe));
+
+  // Normalize paths for case-insensitive comparison
+  const normCurrent = path.normalize(currentExe).toLowerCase();
+  const normInstallPrefix = (path.normalize(installDir) + path.sep).toLowerCase();
+
+  // Already running from install directory — just ensure uninstall script exists
+  if (normCurrent.startsWith(normInstallPrefix)) {
+    const uninstallPath = path.join(installDir, 'uninstall.ps1');
+    if (!fs.existsSync(uninstallPath)) writeUninstallScript(uninstallPath);
+    return;
+  }
+
+  // Running from outside (Downloads, etc.) — install or update
+  try {
+    fs.cpSync(currentDir, installDir, { recursive: true, force: true });
+  } catch {
+    // Copy failed (files locked = app already running) — fall through to single-instance handler
+    return;
+  }
+
+  // Write uninstall script
+  writeUninstallScript(path.join(installDir, 'uninstall.ps1'));
+
+  // Create shortcuts via PowerShell (temp .ps1 file to avoid escaping issues)
+  const desktop = path.join(process.env.USERPROFILE, 'Desktop');
+  const startMenuDir = path.join(
+    process.env.APPDATA, 'Microsoft', 'Windows', 'Start Menu', 'Programs', appName
+  );
+  try { fs.mkdirSync(startMenuDir, { recursive: true }); } catch { /* ignore */ }
+
+  const psScript = [
+    '$shell = New-Object -ComObject WScript.Shell',
+    '$s = $shell.CreateShortcut("' + path.join(desktop, appName + '.lnk') + '")',
+    '$s.TargetPath = "' + installedExe + '"',
+    '$s.WorkingDirectory = "' + installDir + '"',
+    '$s.Description = "' + appName + '"',
+    '$s.Save()',
+    '$s2 = $shell.CreateShortcut("' + path.join(startMenuDir, appName + '.lnk') + '")',
+    '$s2.TargetPath = "' + installedExe + '"',
+    '$s2.WorkingDirectory = "' + installDir + '"',
+    '$s2.Description = "' + appName + '"',
+    '$s2.Save()',
+  ].join('\r\n');
+
+  const tmpPs1 = path.join(os.tmpdir(), 'kairozun-install-shortcuts.ps1');
+  try {
+    fs.writeFileSync(tmpPs1, psScript, 'utf8');
+    execSync('powershell -NoProfile -ExecutionPolicy Bypass -File "' + tmpPs1 + '"', {
+      windowsHide: true,
+      timeout: 15000,
+    });
+  } catch { /* shortcut creation is non-critical */ }
+  try { fs.unlinkSync(tmpPs1); } catch { /* ignore */ }
+
+  // Launch installed copy and exit current process
+  spawnProcess(installedExe, [], { detached: true, stdio: 'ignore' });
+  process.exit(0);
+}
+
+ensureInstalled();
 
 const ICON_PATH = path.join(__dirname, '..', 'assets', 'icon.ico');
 
@@ -73,6 +158,7 @@ if (!gotSingleLock) {
 let overlayWindow = null;
 let settingsWindow = null;
 let tray = null;
+let overlayHiddenByUser = false; // track overlay visibility via opacity (not hide/show)
 
 // ── Roblox log reader ───────────────────────────────────────────────
 const ROBLOX_LOG_DIR = path.join(os.homedir(), 'AppData', 'Local', 'Roblox', 'logs');
@@ -316,7 +402,7 @@ let robloxApiData = {};
 
 function httpsGet(url) {
   return new Promise((resolve, reject) => {
-    https.get(url, { timeout: 8000 }, (res) => {
+    https.get(url, { timeout: 5000 }, (res) => {
       let data = '';
       res.on('data', (chunk) => data += chunk);
       res.on('end', () => {
@@ -335,7 +421,7 @@ function httpsPost(url, body) {
       hostname: parsed.hostname,
       path: parsed.pathname + parsed.search,
       method: 'POST',
-      timeout: 8000,
+      timeout: 5000,
       headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(postData) },
     }, (res) => {
       let data = '';
@@ -758,8 +844,8 @@ function startRobloxWatcher() {
   startApiLoop();
   // Track last sent data to avoid redundant IPC
   let lastSentDataJson = '';
-  setTimeout(() => {
-    robloxInterval = setInterval(() => {
+  let watcherTicks = 0;
+  const doWatcherTick = () => {
       checkRobloxRunning((running) => {
         robloxRunning = running;
         const robloxData = { running };
@@ -965,8 +1051,18 @@ function startRobloxWatcher() {
           send(settingsWindow);
         }
       });
-    }, 5000);
-  }, 300);
+  };
+  // First tick immediately, then adaptive: 2s for first 30s, then 5s
+  doWatcherTick();
+  robloxInterval = setInterval(() => {
+    watcherTicks++;
+    doWatcherTick();
+    // Switch to 5s interval after ~30s (15 ticks × 2s)
+    if (watcherTicks === 15 && robloxInterval) {
+      clearInterval(robloxInterval);
+      robloxInterval = setInterval(doWatcherTick, 5000);
+    }
+  }, 2000);
 }
 
 function createOverlay() {
@@ -997,6 +1093,98 @@ function createOverlay() {
   overlayWindow.setIgnoreMouseEvents(true, { forward: true });
   overlayWindow.loadFile(path.join(__dirname, 'renderer', 'overlay.html'));
   overlayWindow.setAlwaysOnTop(true, 'screen-saver');
+  overlayHiddenByUser = false;
+}
+
+// Toggle overlay visibility via opacity — avoids show()/hide() which
+// disrupts fullscreen apps by changing the window Z-order.
+function toggleOverlayVisibility() {
+  if (!overlayWindow || overlayWindow.isDestroyed()) return;
+  overlayHiddenByUser = !overlayHiddenByUser;
+  overlayWindow.setOpacity(overlayHiddenByUser ? 0 : 1);
+  overlayWindow.setIgnoreMouseEvents(true, { forward: !overlayHiddenByUser });
+}
+
+// ── Screenshot (captures GPU post-processed output incl. NVIDIA filters) ────
+const CAPTURE_DIR = path.join(app.getPath('pictures'), 'Kairozun Screenshots');
+
+async function takeScreenshot() {
+  try {
+    // Hide overlay so it's not captured
+    const wasVisible = overlayWindow && !overlayWindow.isDestroyed() && !overlayHiddenByUser;
+    if (wasVisible) overlayWindow.setOpacity(0);
+
+    // Minimal wait for compositor (1 frame)
+    await new Promise(r => setTimeout(r, 30));
+
+    const display = screen.getPrimaryDisplay();
+    const { width, height } = display.size;
+    const scaleFactor = display.scaleFactor || 1;
+
+    const sources = await desktopCapturer.getSources({
+      types: ['screen'],
+      thumbnailSize: { width: Math.round(width * scaleFactor), height: Math.round(height * scaleFactor) },
+    });
+
+    // Restore overlay, then show flash
+    if (wasVisible && overlayWindow && !overlayWindow.isDestroyed()) {
+      overlayWindow.setOpacity(1);
+    }
+    if (overlayWindow && !overlayWindow.isDestroyed()) {
+      overlayWindow.webContents.send('screenshot-taken', '');
+    }
+
+    if (sources.length === 0) return;
+
+    const image = sources[0].thumbnail;
+    if (image.isEmpty()) return;
+
+    fs.mkdirSync(CAPTURE_DIR, { recursive: true });
+    const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const filePath = path.join(CAPTURE_DIR, `Kairozun_${ts}.png`);
+    fs.writeFileSync(filePath, image.toPNG());
+  } catch {
+    // Restore overlay on error
+    if (overlayWindow && !overlayWindow.isDestroyed() && !overlayHiddenByUser) {
+      overlayWindow.setOpacity(1);
+    }
+  }
+}
+
+// ── Screen Recording ────────────────────────────────────────────────
+let isRecording = false;
+
+async function toggleRecording() {
+  if (isRecording) {
+    // Stop recording
+    if (overlayWindow && !overlayWindow.isDestroyed()) {
+      overlayWindow.webContents.send('stop-recording');
+    }
+    return;
+  }
+
+  // Start recording
+  try {
+    const sources = await desktopCapturer.getSources({ types: ['screen'], thumbnailSize: { width: 1, height: 1 } });
+    if (sources.length === 0) return;
+
+    const sourceId = sources[0].id;
+    const display = screen.getPrimaryDisplay();
+    const { width, height } = display.size;
+    const duration = (savedSettings && savedSettings.recordingDuration) || 30;
+    const quality = (savedSettings && savedSettings.recordingQuality) || 'high';
+    const showOverlay = savedSettings && savedSettings.showOnCapture !== undefined ? savedSettings.showOnCapture : true;
+
+    // Hide overlay if user doesn't want it in recording
+    if (!showOverlay && overlayWindow && !overlayWindow.isDestroyed() && !overlayHiddenByUser) {
+      overlayWindow.setOpacity(0);
+    }
+
+    isRecording = true;
+    if (overlayWindow && !overlayWindow.isDestroyed()) {
+      overlayWindow.webContents.send('start-recording', { sourceId, width, height, duration, quality, showOverlay });
+    }
+  } catch { /* ignore */ }
 }
 
 function createSettingsWindow() {
@@ -1012,6 +1200,7 @@ function createSettingsWindow() {
     frame: false,
     resizable: false,
     alwaysOnTop: true,
+    skipTaskbar: true,
     hasShadow: false,
     fullscreenable: false,
     backgroundColor: '#00000000',
@@ -1293,10 +1482,25 @@ ipcMain.on('set-hotkey', (_e, { action, accelerator }) => {
       const prev = savedSettings && savedSettings.hotkeyOverlay ? savedSettings.hotkeyOverlay : 'CommandOrControl+Shift+H';
       const ok = globalShortcut.register(accelerator, () => {
         if (overlayWindow && !overlayWindow.isDestroyed()) {
-          if (overlayWindow.isVisible()) overlayWindow.hide();
-          else overlayWindow.show();
+          toggleOverlayVisibility();
         }
       });
+      if (ok) {
+        if (accelerator !== prev) {
+          try { globalShortcut.unregister(prev); } catch { /* ignore */ }
+        }
+      }
+    } else if (action === 'screenshot') {
+      const prev = savedSettings && savedSettings.hotkeyScreenshot ? savedSettings.hotkeyScreenshot : 'F9';
+      const ok = globalShortcut.register(accelerator, takeScreenshot);
+      if (ok) {
+        if (accelerator !== prev) {
+          try { globalShortcut.unregister(prev); } catch { /* ignore */ }
+        }
+      }
+    } else if (action === 'recording') {
+      const prev = savedSettings && savedSettings.hotkeyRecording ? savedSettings.hotkeyRecording : 'F10';
+      const ok = globalShortcut.register(accelerator, toggleRecording);
       if (ok) {
         if (accelerator !== prev) {
           try { globalShortcut.unregister(prev); } catch { /* ignore */ }
@@ -1306,9 +1510,27 @@ ipcMain.on('set-hotkey', (_e, { action, accelerator }) => {
   } catch { /* ignore invalid accelerator */ }
 });
 
-// Toggle screen recording visibility (disabled — setContentProtection triggers AV)
+// "Show on capture" toggle — controls whether overlay is visible during recording
 ipcMain.on('set-capture-mode', (_e, visible) => {
-  // no-op
+  // Setting is persisted via updateSettings; used when recording starts
+});
+
+// Save recorded video data from overlay renderer
+ipcMain.on('save-recording', (_e, buffer) => {
+  try {
+    fs.mkdirSync(CAPTURE_DIR, { recursive: true });
+    const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const filePath = path.join(CAPTURE_DIR, `Kairozun_${ts}.webm`);
+    fs.writeFileSync(filePath, Buffer.from(buffer));
+  } catch { /* ignore save errors */ }
+});
+
+// Recording state update from overlay renderer
+ipcMain.on('recording-state', (_e, recording) => {
+  isRecording = recording;
+  if (!recording && overlayWindow && !overlayWindow.isDestroyed() && !overlayHiddenByUser) {
+    overlayWindow.setOpacity(1);
+  }
 });
 
 // Allow overlay to toggle mouse passthrough for dragging
@@ -1334,8 +1556,8 @@ app.on('second-instance', () => {
   if (settingsWindow && !settingsWindow.isDestroyed()) {
     if (settingsWindow.isMinimized()) settingsWindow.restore();
     settingsWindow.focus();
-  } else if (overlayWindow && !overlayWindow.isDestroyed()) {
-    overlayWindow.show();
+  } else if (overlayWindow && !overlayWindow.isDestroyed() && overlayHiddenByUser) {
+    toggleOverlayVisibility();
   }
 });
 
@@ -1360,7 +1582,7 @@ app.whenReady().then(() => {
     { label: 'Settings', click: () => createSettingsWindow() },
     { label: 'Show/Hide Overlay', click: () => {
       if (overlayWindow && !overlayWindow.isDestroyed()) {
-        overlayWindow.isVisible() ? overlayWindow.hide() : overlayWindow.show();
+        toggleOverlayVisibility();
       }
     }},
     { type: 'separator' },
@@ -1412,8 +1634,7 @@ app.whenReady().then(() => {
   try {
     regOverlay = globalShortcut.register(hotkeyOverlay, () => {
       if (overlayWindow && !overlayWindow.isDestroyed()) {
-        if (overlayWindow.isVisible()) overlayWindow.hide();
-        else overlayWindow.show();
+        toggleOverlayVisibility();
       }
     });
   } catch { /* invalid accelerator */ }
@@ -1421,12 +1642,39 @@ app.whenReady().then(() => {
     try {
       globalShortcut.register('CommandOrControl+Shift+H', () => {
         if (overlayWindow && !overlayWindow.isDestroyed()) {
-          if (overlayWindow.isVisible()) overlayWindow.hide();
-          else overlayWindow.show();
+          toggleOverlayVisibility();
         }
       });
     } catch { /* ignore */ }
     console.log('[Hotkey] Overlay: failed to register', hotkeyOverlay, '— using Ctrl+Shift+H');
+  }
+
+  // F9 — take screenshot (use saved or default)
+  let hotkeyScreenshot = savedSettings && savedSettings.hotkeyScreenshot ? savedSettings.hotkeyScreenshot : 'F9';
+  if (!isValidAccelerator(hotkeyScreenshot)) hotkeyScreenshot = 'F9';
+  let regScreenshot = false;
+  try {
+    regScreenshot = globalShortcut.register(hotkeyScreenshot, takeScreenshot);
+  } catch { /* invalid accelerator */ }
+  if (!regScreenshot && hotkeyScreenshot !== 'F9') {
+    try {
+      globalShortcut.register('F9', takeScreenshot);
+    } catch { /* ignore */ }
+    console.log('[Hotkey] Screenshot: failed to register', hotkeyScreenshot, '— using F9');
+  }
+
+  // F10 — start/stop screen recording (use saved or default)
+  let hotkeyRecording = savedSettings && savedSettings.hotkeyRecording ? savedSettings.hotkeyRecording : 'F10';
+  if (!isValidAccelerator(hotkeyRecording)) hotkeyRecording = 'F10';
+  let regRecording = false;
+  try {
+    regRecording = globalShortcut.register(hotkeyRecording, toggleRecording);
+  } catch { /* invalid accelerator */ }
+  if (!regRecording && hotkeyRecording !== 'F10') {
+    try {
+      globalShortcut.register('F10', toggleRecording);
+    } catch { /* ignore */ }
+    console.log('[Hotkey] Recording: failed to register', hotkeyRecording, '— using F10');
   }
 });
 

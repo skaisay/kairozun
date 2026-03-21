@@ -50,8 +50,15 @@ const i18n = {
     hotkeys: 'Hotkeys',
     hotkeySettings: 'Open / Close Settings',
     hotkeyOverlay: 'Show / Hide Overlay',
+    hotkeyScreenshot: 'Screenshot',
+    hotkeyRecording: 'Screen Recording',
     captureSettings: 'Screen Capture',
     showOnCapture: 'Show on screen recording',
+    recordingDuration: 'Recording duration',
+    recordingQuality: 'Quality',
+    qualityMax: 'Maximum',
+    qualityHigh: 'High',
+    qualityMedium: 'Medium',
     accountInfo: 'Account',
     currentGame: 'Current Game',
     serverInfo: 'Server',
@@ -155,8 +162,15 @@ const i18n = {
     hotkeys: 'Горячие клавиши',
     hotkeySettings: 'Открыть / Закрыть настройки',
     hotkeyOverlay: 'Показать / Скрыть оверлей',
+    hotkeyScreenshot: 'Скриншот',
+    hotkeyRecording: 'Запись экрана',
     captureSettings: 'Захват экрана',
     showOnCapture: 'Показывать при записи экрана',
+    recordingDuration: 'Длительность записи',
+    recordingQuality: 'Качество',
+    qualityMax: 'Максимальное',
+    qualityHigh: 'Высокое',
+    qualityMedium: 'Среднее',
     accountInfo: 'Аккаунт',
     currentGame: 'Текущая игра',
     serverInfo: 'Сервер',
@@ -225,6 +239,10 @@ function applyLang(lang) {
     const key = el.getAttribute('data-i18n');
     if (strings[key]) el.textContent = strings[key];
   });
+  document.querySelectorAll('[data-i18n-opt]').forEach((el) => {
+    const key = el.getAttribute('data-i18n-opt');
+    if (strings[key]) el.textContent = strings[key];
+  });
   document.querySelectorAll('.lang-btn').forEach((btn) => {
     btn.classList.toggle('active', btn.dataset.lang === lang);
   });
@@ -281,6 +299,8 @@ const chkRegion = document.getElementById('chk-region');
 const chkUptime = document.getElementById('chk-uptime');
 const chkPlayerList = document.getElementById('chk-playerlist');
 const chkCapture = document.getElementById('chk-capture');
+const selRecDuration = document.getElementById('sel-rec-duration');
+const selRecQuality = document.getElementById('sel-rec-quality');
 
 [chkFps, chkPing, chkKill, chkSys, chkAccount, chkFriends, chkGame, chkPlayers, chkServer, chkVisits, chkClock, chkGenre, chkRating, chkFavs, chkRegion, chkUptime, chkPlayerList].forEach((el) => el.addEventListener('change', pushSettings));
 
@@ -289,6 +309,10 @@ chkCapture.addEventListener('change', () => {
   window.kairozun.setCaptureMode(chkCapture.checked);
   pushSettings();
 });
+
+// Recording duration & quality selectors
+selRecDuration.addEventListener('change', pushSettings);
+selRecQuality.addEventListener('change', pushSettings);
 
 // ── Overlay Opacity slider ───────────────────────────────────────────
 const overlayOpacitySlider = document.getElementById('overlay-opacity');
@@ -346,6 +370,8 @@ if (_saved) {
   if (_saved.showUptime !== undefined) chkUptime.checked = _saved.showUptime;
   if (_saved.showPlayerList !== undefined) chkPlayerList.checked = _saved.showPlayerList;
   if (_saved.showOnCapture !== undefined) chkCapture.checked = _saved.showOnCapture;
+  if (_saved.recordingDuration !== undefined) selRecDuration.value = String(_saved.recordingDuration);
+  if (_saved.recordingQuality !== undefined) selRecQuality.value = _saved.recordingQuality;
   if (_saved.scaleTL !== undefined && scaleTL) scaleTL.value = _saved.scaleTL;
   if (_saved.scaleTR !== undefined && scaleTR) scaleTR.value = _saved.scaleTR;
   if (_saved.scaleBL !== undefined && scaleBL) scaleBL.value = _saved.scaleBL;
@@ -387,6 +413,8 @@ function pushSettings() {
     showUptime: chkUptime.checked,
     showPlayerList: chkPlayerList.checked,
     showOnCapture: chkCapture.checked,
+    recordingDuration: parseInt(selRecDuration.value, 10),
+    recordingQuality: selRecQuality.value,
     scaleTL: scaleTL ? parseFloat(scaleTL.value) : 1,
     scaleTR: scaleTR ? parseFloat(scaleTR.value) : 1,
     scaleBL: scaleBL ? parseFloat(scaleBL.value) : 1,
@@ -762,6 +790,12 @@ if (_saved && _saved.hotkeySettings) {
 if (_saved && _saved.hotkeyOverlay) {
   document.getElementById('hotkey-overlay').textContent = _saved.hotkeyOverlay.replace('CommandOrControl', 'Ctrl');
 }
+if (_saved && _saved.hotkeyScreenshot) {
+  document.getElementById('hotkey-screenshot').textContent = _saved.hotkeyScreenshot.replace('CommandOrControl', 'Ctrl');
+}
+if (_saved && _saved.hotkeyRecording) {
+  document.getElementById('hotkey-recording').textContent = _saved.hotkeyRecording.replace('CommandOrControl', 'Ctrl');
+}
 
 function keyEventToAccelerator(e) {
   const parts = [];
@@ -843,7 +877,9 @@ hotkeySaveBtn.addEventListener('click', () => {
     btn.textContent = recordedAccelerator.replace('CommandOrControl', 'Ctrl');
     window.kairozun.setHotkey(currentHotkeyAction, recordedAccelerator);
     // Persist via settings
-    const settingsKey = currentHotkeyAction === 'settings' ? 'hotkeySettings' : 'hotkeyOverlay';
+    const settingsKey = currentHotkeyAction === 'settings' ? 'hotkeySettings'
+      : currentHotkeyAction === 'screenshot' ? 'hotkeyScreenshot'
+      : currentHotkeyAction === 'recording' ? 'hotkeyRecording' : 'hotkeyOverlay';
     const patch = {};
     patch[settingsKey] = recordedAccelerator;
     window.kairozun.updateSettings(patch);
