@@ -8,6 +8,14 @@ const https = require('https');
 const net = require('net');
 const dns = require('dns');
 
+// GPU acceleration & performance flags
+app.commandLine.appendSwitch('enable-gpu-rasterization');
+app.commandLine.appendSwitch('enable-zero-copy');
+app.commandLine.appendSwitch('enable-hardware-overlays', 'single-fullscreen,single-on-top,underlay');
+app.commandLine.appendSwitch('disable-software-rasterizer');
+app.commandLine.appendSwitch('enable-features', 'VaapiVideoDecoder,VaapiVideoEncoder');
+app.commandLine.appendSwitch('ignore-gpu-blocklist');
+
 // Simple HTTP GET (for ip-api.com which is HTTP-only free tier)
 function httpGet(url) {
   return new Promise((resolve) => {
@@ -1193,6 +1201,7 @@ function createOverlay() {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
+      backgroundThrottling: false,
     },
   });
 
@@ -1346,12 +1355,15 @@ function createSettingsWindow() {
     fullscreenable: false,
     backgroundColor: '#00000000',
     icon: ICON_PATH,
+    show: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
     },
   });
+
+  settingsWindow.once('ready-to-show', () => settingsWindow.show());
 
   settingsWindow.loadFile(path.join(__dirname, 'renderer', 'settings.html'));
 
@@ -1977,8 +1989,12 @@ ipcMain.on('recording-state', (_e, recording) => {
   isRecording = recording;
   if (!recording && overlayWindow && !overlayWindow.isDestroyed()) {
     if (!overlayHiddenByUser) overlayWindow.setOpacity(1);
-    // Ensure mouse passthrough is restored after recording
-    overlayWindow.setIgnoreMouseEvents(true, { forward: true });
+    // Always restore mouse passthrough after recording
+    setTimeout(() => {
+      if (overlayWindow && !overlayWindow.isDestroyed()) {
+        overlayWindow.setIgnoreMouseEvents(true, { forward: true });
+      }
+    }, 100);
   }
 });
 

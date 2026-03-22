@@ -480,11 +480,11 @@ function stopRecording() {
 
 // Quality presets: bitrate & fps (optimized for performance)
 const QUALITY_PRESETS = {
-  ultra:  { fps: 60, bitrate: 35_000_000 },
-  max:    { fps: 60, bitrate: 20_000_000 },
-  high:   { fps: 60, bitrate: 12_000_000 },
-  medium: { fps: 30, bitrate: 6_000_000 },
-  low:    { fps: 30, bitrate: 3_000_000 },
+  ultra:  { fps: 60, bitrate: 30_000_000 },
+  max:    { fps: 60, bitrate: 16_000_000 },
+  high:   { fps: 60, bitrate: 10_000_000 },
+  medium: { fps: 30, bitrate: 5_000_000 },
+  low:    { fps: 30, bitrate: 2_500_000 },
 };
 
 window.kairozun.onStartRecording(async ({ sourceId, width, height, duration, quality, showOverlay }) => {
@@ -492,8 +492,12 @@ window.kairozun.onStartRecording(async ({ sourceId, width, height, duration, qua
 
   const preset = QUALITY_PRESETS[quality] || QUALITY_PRESETS.high;
 
+  // Force mouse passthrough immediately so mouse never blocks
+  window.kairozun.setOverlayMouse(true);
+
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({
+    // Capture video stream
+    const videoStream = await navigator.mediaDevices.getUserMedia({
       audio: false,
       video: {
         mandatory: {
@@ -509,7 +513,24 @@ window.kairozun.onStartRecording(async ({ sourceId, width, height, duration, qua
       },
     });
 
-    // Prefer H264 (hardware-accelerated) over VP9 (CPU-heavy)
+    // Try to capture system audio
+    let combinedStream = videoStream;
+    try {
+      const audioStream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          mandatory: {
+            chromeMediaSource: 'desktop',
+            chromeMediaSourceId: sourceId,
+          },
+        },
+        video: false,
+      });
+      // Merge video + audio tracks
+      const tracks = [...videoStream.getVideoTracks(), ...audioStream.getAudioTracks()];
+      combinedStream = new MediaStream(tracks);
+    } catch { /* audio capture not available — continue without */ }
+
+    // Prefer H264 (hardware-accelerated) over VP8/VP9
     let mimeType = 'video/webm;codecs=h264';
     if (!MediaRecorder.isTypeSupported(mimeType)) {
       mimeType = 'video/webm;codecs=vp8';
@@ -519,7 +540,7 @@ window.kairozun.onStartRecording(async ({ sourceId, width, height, duration, qua
     }
 
     recordedChunks = [];
-    mediaRecorder = new MediaRecorder(stream, {
+    mediaRecorder = new MediaRecorder(combinedStream, {
       mimeType,
       videoBitsPerSecond: preset.bitrate,
     });
@@ -527,32 +548,35 @@ window.kairozun.onStartRecording(async ({ sourceId, width, height, duration, qua
     // Stream chunks to disk immediately — no RAM buildup
     window.kairozun.startRecordingFile();
 
-    mediaRecorder.ondataavailable = async (e) => {
+    mediaRecorder.ondataavailable = (e) => {
       if (e.data.size > 0) {
-        const buf = await e.data.arrayBuffer();
-        window.kairozun.sendRecordingChunk(new Uint8Array(buf));
+        e.data.arrayBuffer().then(buf => {
+          window.kairozun.sendRecordingChunk(new Uint8Array(buf));
+        });
       }
     };
 
     mediaRecorder.onstop = () => {
-      stream.getTracks().forEach(t => t.stop());
+      combinedStream.getTracks().forEach(t => t.stop());
       clearInterval(recTimerInterval);
       recIndicator.classList.add('hidden');
-      // Defer IPC calls to next tick to avoid UI freeze
+      mediaRecorder = null;
+      // Defer cleanup to avoid UI freeze
       setTimeout(() => {
         window.kairozun.endRecordingFile();
         window.kairozun.recordingState(false);
-        // Restore mouse passthrough
         window.kairozun.setOverlayMouse(true);
       }, 50);
-      mediaRecorder = null;
     };
 
-    mediaRecorder.start(2000);
+    // Longer timeslice = fewer IPC calls = less overhead
+    mediaRecorder.start(4000);
     recStartTime = Date.now();
     recTimerEl.textContent = '0:00';
     recIndicator.classList.remove('hidden');
     window.kairozun.recordingState(true);
+    // Force mouse passthrough again after recording started
+    window.kairozun.setOverlayMouse(true);
     recTimerInterval = setInterval(updateRecTimer, 1000);
 
     // Auto-stop after duration
@@ -561,6 +585,7 @@ window.kairozun.onStartRecording(async ({ sourceId, width, height, duration, qua
     }, duration * 1000);
   } catch {
     window.kairozun.recordingState(false);
+    window.kairozun.setOverlayMouse(true);
   }
 });
 
