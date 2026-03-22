@@ -500,6 +500,24 @@ body {
   margin-bottom: 0;
 }
 
+.roblox-game-description {
+  margin-top: 8px;
+  padding: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.roblox-game-description.hidden { display: none; }
+
+.roblox-game-description-text {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  line-height: 1.5;
+  max-height: 80px;
+  overflow-y: auto;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+}
+
 /* ── System Bars ───────────────────────────────────────────────────── */
 
 .sys-row {
@@ -1486,3 +1504,366 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 .hotkey-modal-btn.secondary:hover { background: rgba(255, 255, 255, 0.1); }
+
+/* ═══════════════════════════════════════════════════════════════════
+   Screenshot Gallery
+   ═══════════════════════════════════════════════════════════════════ */
+
+.gallery-toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.gallery-open-folder-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.gallery-open-folder-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.gallery-refresh-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  transition: background 0.2s, transform 0.3s;
+}
+
+.gallery-refresh-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: rotate(90deg);
+}
+
+.gallery-collage-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.gallery-collage-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.gallery-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  font-size: 12px;
+  opacity: 0.4;
+  padding: 30px 0;
+}
+
+.gallery-thumb {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(0, 0, 0, 0.3);
+  transition: border-color 0.2s, transform 0.15s;
+}
+
+.gallery-thumb:hover {
+  border-color: rgba(99, 102, 241, 0.4);
+  transform: scale(1.03);
+}
+
+.gallery-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.gallery-thumb-date {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 3px 6px;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+  font-size: 9px;
+  opacity: 0;
+  transition: opacity 0.2s;
+  text-align: right;
+}
+
+.gallery-thumb:hover .gallery-thumb-date {
+  opacity: 1;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Gallery Context Menu
+   ═══════════════════════════════════════════════════════════════════ */
+
+.gallery-context-menu {
+  position: fixed;
+  z-index: 3000;
+  min-width: 160px;
+  background: rgba(18, 18, 30, 0.97);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 4px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(20px);
+  animation: ctxMenuIn 0.12s ease-out;
+}
+
+@keyframes ctxMenuIn {
+  from { opacity: 0; transform: scale(0.92); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.gallery-context-menu.hidden { display: none; }
+
+.ctx-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 12px;
+  border: none;
+  background: none;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.ctx-menu-item:hover {
+  background: rgba(99, 102, 241, 0.2);
+  color: #fff;
+}
+
+.ctx-menu-item.danger:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+}
+
+.ctx-menu-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.06);
+  margin: 3px 6px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Smoothness & Transitions
+   ═══════════════════════════════════════════════════════════════════ */
+
+.gallery-thumb {
+  will-change: transform;
+}
+
+.gallery-thumb img {
+  transition: transform 0.2s ease;
+}
+
+.gallery-thumb:hover img {
+  transform: scale(1.04);
+}
+
+.filter-btn {
+  will-change: background, color;
+}
+
+.emoji-btn {
+  will-change: transform;
+}
+
+/* ── Collage Modal ─────────────────────────────────────────────── */
+
+.collage-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.collage-modal-overlay.hidden { display: none; }
+
+.collage-modal {
+  width: 90vw;
+  max-width: 900px;
+  max-height: 85vh;
+  background: rgba(22, 22, 30, 0.97);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.collage-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.collage-modal-close {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.collage-modal-close:hover {
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.collage-modal-hint {
+  padding: 8px 18px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.collage-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  padding: 6px 18px;
+  overflow-y: auto;
+  max-height: 60vh;
+}
+
+.collage-thumb {
+  position: relative;
+  border-radius: 6px;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  cursor: pointer;
+  border: 2px solid transparent;
+  background: rgba(0, 0, 0, 0.3);
+  transition: border-color 0.15s;
+}
+
+.collage-thumb.selected {
+  border-color: rgba(99, 102, 241, 0.7);
+}
+
+.collage-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.collage-thumb-check {
+  position: absolute;
+  top: 4px; right: 4px;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: transparent;
+  transition: background 0.15s, color 0.15s;
+}
+
+.collage-thumb.selected .collage-thumb-check {
+  background: rgba(99, 102, 241, 0.8);
+  border-color: rgba(99, 102, 241, 0.9);
+  color: #fff;
+}
+
+.collage-modal-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.collage-count {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+  margin-right: auto;
+}
+
+.collage-create-btn {
+  padding: 6px 18px;
+  border-radius: 8px;
+  border: 1px solid rgba(99, 102, 241, 0.4);
+  background: rgba(99, 102, 241, 0.2);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.collage-create-btn:hover:not(:disabled) {
+  background: rgba(99, 102, 241, 0.35);
+}
+
+.collage-create-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.collage-cancel-btn {
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.collage-cancel-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}

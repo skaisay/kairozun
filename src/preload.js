@@ -22,4 +22,12 @@ contextBridge.exposeInMainWorld('kairozun', {
   setHotkey: (action, accelerator) => ipcRenderer.send('set-hotkey', { action, accelerator }),
   setCaptureMode: (visible) => ipcRenderer.send('set-capture-mode', visible),
   openExternal: (url) => ipcRenderer.send('open-external', url),
+  openEditor: (data) => ipcRenderer.send('open-editor', data),
+  getScreenshots: () => ipcRenderer.invoke('get-screenshots'),
+  readScreenshot: (filePath) => ipcRenderer.invoke('read-screenshot', filePath),
+  readScreenshotThumb: (filePath) => ipcRenderer.invoke('read-screenshot-thumb', filePath),
+  saveEditedScreenshot: (data) => ipcRenderer.invoke('save-edited-screenshot', data),
+  deleteScreenshot: (filePath) => ipcRenderer.invoke('delete-screenshot', filePath),
+  openScreenshotsFolder: () => ipcRenderer.send('open-screenshots-folder'),
+  openCollage: (data) => ipcRenderer.send('open-collage', data),
 });

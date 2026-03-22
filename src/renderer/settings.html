@@ -49,6 +49,10 @@
           <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
           <span class="nav-label" data-i18n="navHistory">History</span>
         </button>
+        <button class="nav-btn" data-tab="gallery">
+          <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></span>
+          <span class="nav-label" data-i18n="navGallery">Gallery</span>
+        </button>
         <button class="nav-btn" data-tab="about">
           <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
           <span class="nav-label" data-i18n="navAbout">About</span>
@@ -86,6 +90,10 @@
               <span class="info-desc" data-i18n="hotkeyRecording">Screen Recording</span>
               <button class="hotkey-btn" id="hotkey-recording" data-action="recording">F10</button>
             </div>
+            <div class="info-row">
+              <span class="info-desc" data-i18n="hotkeyQuit">Quit Application</span>
+              <button class="hotkey-btn" id="hotkey-quit" data-action="quit">Alt+F4</button>
+            </div>
           </div>
           <div class="section">
             <label data-i18n="captureSettings">Screen Capture</label>
@@ -99,6 +107,10 @@
                 <option value="5">5s</option>
                 <option value="30" selected>30s</option>
                 <option value="60">1 min</option>
+                <option value="120">2 min</option>
+                <option value="300">5 min</option>
+                <option value="600">10 min</option>
+                <option value="900">15 min</option>
               </select>
             </div>
             <div class="toggle-row">
@@ -135,6 +147,10 @@
             <div class="toggle-row">
               <span data-i18n="showFriends">Show Friends</span>
               <input type="checkbox" id="chk-friends" checked>
+            </div>
+            <div class="toggle-row">
+              <span data-i18n="showFriendsList">Show Friends List</span>
+              <input type="checkbox" id="chk-friendslist" checked>
             </div>
             <div class="toggle-row">
               <span data-i18n="showGame">Show Game Info</span>
@@ -303,65 +319,88 @@
               <div class="roblox-game-stats">
                 <div class="roblox-stat">
                   <span class="roblox-stat-val" id="rbx-game-playing">--</span>
-                  <span class="roblox-stat-label">Playing</span>
+                  <span class="roblox-stat-label" data-i18n="gamePlaying">Playing</span>
                 </div>
                 <div class="roblox-stat">
                   <span class="roblox-stat-val" id="rbx-game-visits">--</span>
-                  <span class="roblox-stat-label">Visits</span>
+                  <span class="roblox-stat-label" data-i18n="gameVisits">Visits</span>
                 </div>
                 <div class="roblox-stat">
                   <span class="roblox-stat-val" id="rbx-game-favs">--</span>
-                  <span class="roblox-stat-label">Favs</span>
+                  <span class="roblox-stat-label" data-i18n="gameFavs">Favs</span>
                 </div>
                 <div class="roblox-stat">
                   <span class="roblox-stat-val" id="rbx-game-rating">--</span>
-                  <span class="roblox-stat-label">Rating</span>
+                  <span class="roblox-stat-label" data-i18n="gameRating">Rating</span>
                 </div>
               </div>
               <div class="roblox-game-details">
                 <div class="info-row">
-                  <span class="info-label">Genre</span>
+                  <span class="info-label" data-i18n="gameGenre">Genre</span>
                   <span class="info-val" id="rbx-game-genre">--</span>
                 </div>
                 <div class="info-row">
-                  <span class="info-label">Creator</span>
+                  <span class="info-label" data-i18n="gameCreator">Creator</span>
                   <span class="info-val" id="rbx-game-creator">--</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label" data-i18n="creatorType">Creator Type</span>
+                  <span class="info-val" id="rbx-game-creator-type">--</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label" data-i18n="maxPlayers">Max Players</span>
+                  <span class="info-val" id="rbx-game-max-players">--</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label" data-i18n="created">Created</span>
+                  <span class="info-val" id="rbx-game-created">--</span>
                 </div>
                 <div class="info-row">
                   <span class="info-label" data-i18n="updated">Updated</span>
                   <span class="info-val" id="rbx-game-updated">--</span>
                 </div>
+                <div class="info-row">
+                  <span class="info-label" data-i18n="gameLikes">👍 Likes</span>
+                  <span class="info-val" id="rbx-game-likes">--</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label" data-i18n="gameDislikes">👎 Dislikes</span>
+                  <span class="info-val" id="rbx-game-dislikes">--</span>
+                </div>
+              </div>
+              <div class="roblox-game-description hidden" id="rbx-game-description-wrap">
+                <div class="roblox-game-description-text" id="rbx-game-description"></div>
               </div>
             </div>
           </div>
           <div class="section">
             <label data-i18n="serverInfo">Server</label>
             <div class="info-row">
-              <span class="info-label">IP</span>
+              <span class="info-label" data-i18n="serverIp">IP</span>
               <span class="info-val mono" id="rbx-server-ip">--</span>
             </div>
             <div class="info-row">
-              <span class="info-label">Ping</span>
+              <span class="info-label" data-i18n="serverPing">Ping</span>
               <span class="info-val" id="rbx-ping-val">-- ms</span>
             </div>
             <div class="info-row">
-              <span class="info-label">Players</span>
+              <span class="info-label" data-i18n="serverPlayers">Players</span>
               <span class="info-val" id="rbx-server-players">--</span>
             </div>
             <div class="info-row">
-              <span class="info-label">Server FPS</span>
+              <span class="info-label" data-i18n="serverFps">Server FPS</span>
               <span class="info-val" id="rbx-server-fps">--</span>
             </div>
             <div class="info-row">
-              <span class="info-label">Servers</span>
+              <span class="info-label" data-i18n="serverCount">Servers</span>
               <span class="info-val" id="rbx-total-servers">--</span>
             </div>
             <div class="info-row">
-              <span class="info-label">Place ID</span>
+              <span class="info-label" data-i18n="placeId">Place ID</span>
               <span class="info-val mono" id="rbx-place-id">--</span>
             </div>
             <div class="info-row">
-              <span class="info-label">Universe ID</span>
+              <span class="info-label" data-i18n="universeId">Universe ID</span>
               <span class="info-val mono" id="rbx-universe-id">--</span>
             </div>
             <div class="info-row">
@@ -562,6 +601,29 @@
           </div>
         </div>
 
+        <!-- TAB: Gallery -->
+        <div class="tab-panel" id="tab-gallery">
+          <h2 data-i18n="navGallery">Gallery</h2>
+          <div class="section gallery-toolbar">
+            <button class="gallery-open-folder-btn" id="gallery-open-folder">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              <span data-i18n="openFolder">Open Folder</span>
+            </button>
+            <button class="gallery-refresh-btn" id="gallery-refresh">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            </button>
+            <button class="gallery-collage-btn" id="gallery-collage-btn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+              <span data-i18n="collage">Collage</span>
+            </button>
+          </div>
+          <div class="section">
+            <div class="gallery-grid" id="gallery-grid">
+              <div class="gallery-empty" data-i18n="galleryEmpty">No screenshots yet. Press F9 to take a screenshot.</div>
+            </div>
+          </div>
+        </div>
+
         <!-- TAB: About -->
         <div class="tab-panel" id="tab-about">
           <h2 data-i18n="navAbout">About</h2>
@@ -644,6 +706,23 @@
         <button class="hotkey-modal-btn secondary" id="hotkey-modal-cancel">Cancel</button>
       </div>
     </div>
+  </div>
+
+  <!-- Gallery Context Menu -->
+  <div class="gallery-context-menu hidden" id="gallery-context-menu">
+    <button class="ctx-menu-item" id="ctx-menu-open-editor">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      <span data-i18n="ctxEdit">Edit</span>
+    </button>
+    <button class="ctx-menu-item" id="ctx-menu-open-folder">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+      <span data-i18n="ctxOpenFolder">Open Folder</span>
+    </button>
+    <div class="ctx-menu-divider"></div>
+    <button class="ctx-menu-item danger" id="ctx-menu-delete">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+      <span data-i18n="ctxDelete">Delete</span>
+    </button>
   </div>
 
   <script src="settings.js"></script>

@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kairozun Collage</title>
+  <link rel="stylesheet" href="collage.css">
+</head>
+<body>
+  <div class="collage-window">
+    <div class="collage-titlebar" id="collage-titlebar">
+      <span class="collage-title" id="collage-title">Create Collage</span>
+      <div class="collage-titlebar-right">
+        <span class="collage-count" id="collage-count">0 / 9</span>
+        <button class="collage-btn create" id="collage-create-btn" disabled>Create</button>
+        <button class="titlebar-close" id="btn-close">✕</button>
+      </div>
+    </div>
+    <div class="collage-hint" id="collage-hint">Select 2-9 screenshots, then click Create</div>
+    <div class="collage-grid" id="collage-grid"></div>
+  </div>
+  <script src="collage.js"></script>
+</body>
+</html>

@@ -117,6 +117,154 @@ body {
   overflow: hidden;
 }
 
+/* ── Friends List Panel (MIDDLE-RIGHT) ────────────────────────────── */
+
+.middle-right {
+  top: calc(50% - 160px);
+  right: 14px;
+  max-width: 200px;
+  max-height: 320px;
+  overflow: hidden;
+}
+
+.friends-list-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  margin-bottom: 6px;
+}
+
+.friends-list-header svg {
+  opacity: 0.5;
+  flex-shrink: 0;
+}
+
+.friends-list-title {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  opacity: 0.5;
+}
+
+.friends-list-online {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 700;
+  color: #6ee7b7;
+  background: rgba(110, 231, 183, 0.1);
+  padding: 1px 6px;
+  border-radius: 8px;
+}
+
+.friends-collapse-btn {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 2px;
+  opacity: 0.4;
+  transition: opacity 0.15s ease, transform 0.3s ease;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.friends-collapse-btn:hover { opacity: 0.8; }
+.friends-collapse-btn.collapsed { transform: rotate(-90deg); }
+
+.friends-list-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 270px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  transition: max-height 0.3s ease, opacity 0.3s ease;
+}
+
+.friends-list-body.collapsed {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+}
+
+.friends-list-body::-webkit-scrollbar { width: 3px; }
+.friends-list-body::-webkit-scrollbar-track { background: transparent; }
+.friends-list-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+.friend-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 4px;
+  border-radius: 6px;
+  transition: background 0.15s ease;
+}
+
+.friend-row:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.friend-avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.friend-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.friend-letter {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  opacity: 0.6;
+}
+
+.friend-status-dot {
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(8, 8, 16, 0.9);
+  background: #6b7280;
+}
+
+.friend-status-dot.online {
+  background: #6ee7b7;
+}
+
+.friend-name {
+  font-size: 10px;
+  font-weight: 500;
+  opacity: 0.8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+
+.friend-row.is-online .friend-name {
+  opacity: 1;
+}
+
 .player-list-header {
   display: flex;
   align-items: center;
@@ -334,6 +482,17 @@ body {
   font-weight: 500;
   opacity: 0.7;
   margin-left: 0;
+}
+
+/* ── Performance Graphs ────────────────────────────────────────────── */
+
+.perf-graph {
+  width: 100%;
+  height: 14px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.2);
+  margin: 0;
+  display: block;
 }
 
 /* ── Progress Bars ─────────────────────────────────────────────────── */

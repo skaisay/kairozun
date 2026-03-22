@@ -8,6 +8,7 @@ const i18n = {
     fps: 'FPS',
     ping: 'PING',
     friends: 'FR',
+    friendsList: 'Friends',
     hint: 'Alt+0 — Settings  |  Ctrl+Shift+H — Hide',
     servers: 'SRV',
     players: 'Players',
@@ -16,6 +17,7 @@ const i18n = {
     fps: 'ФПС',
     ping: 'ПИНГ',
     friends: 'ДР',
+    friendsList: 'Друзья',
     hint: 'Alt+0 — Настройки  |  Ctrl+Shift+H — Скрыть',
     servers: 'СРВ',
     players: 'Игроки',
@@ -109,6 +111,12 @@ const playerListCountEl = document.getElementById('player-list-count');
 const playerAvatarGridEl = document.getElementById('player-avatar-grid');
 const usernameEl = document.getElementById('username');
 
+// Friends list panel elements
+const panelMr = document.getElementById('panel-mr');
+const friendsOnlineCountEl = document.getElementById('friends-online-count');
+const friendsListBodyEl = document.getElementById('friends-list-body');
+const friendsCollapseBtn = document.getElementById('friends-collapse-btn');
+
 // Cache last known good avatar URL to prevent flickering/disappearing
 let cachedAvatarUrl = null;
 
@@ -195,6 +203,7 @@ const widgetToggles = {
   showRegion: true,
   showUptime: true,
   showPlayerList: true,
+  showFriendsList: true,
 };
 
 window.kairozun.onRobloxData((data) => {
@@ -359,6 +368,35 @@ window.kairozun.onRobloxData((data) => {
     panelMl.classList.remove('panel-hidden');
   }
 
+  // Friends list — show only online friends
+  // Source 1: friendsList from API (has isOnline flag)
+  // Source 2: serverPlayerList friends (confirmed on same server)
+  const onlineFriends = [];
+  const seenIds = new Set();
+  if (data.friendsList) {
+    for (const f of data.friendsList) {
+      if (f.isOnline) {
+        onlineFriends.push(f);
+        seenIds.add(f.id);
+      }
+    }
+  }
+  // Add friends from server player list that might not be in friendsList
+  if (data.serverPlayerList) {
+    for (const p of data.serverPlayerList) {
+      if (p.isFriend && !seenIds.has(p.userId)) {
+        onlineFriends.push({
+          id: p.userId,
+          username: p.username,
+          displayName: p.displayName,
+          isOnline: true,
+          avatarUrl: p.avatarUrl,
+        });
+      }
+    }
+  }
+  renderFriendsList(onlineFriends);
+
   // When Roblox is offline or not in game, hide game info
   // But only if we ALSO have no game data (prevents false negatives from log truncation)
   const hasGameData = !!(data.gameName || data.serverPlayerCount || data.placeId);
@@ -381,6 +419,8 @@ window.kairozun.onRobloxData((data) => {
     accountAgeRowEl.classList.add('hidden');
     panelMl.classList.add('panel-hidden');
     playerAvatarGridEl.innerHTML = '';
+    panelMr.classList.add('panel-hidden');
+    friendsListBodyEl.innerHTML = '';
     gameIcon.classList.add('hidden');
     friendsValue.textContent = '--';
     // Only hide avatar if truly offline (no cached URL)
@@ -522,11 +562,17 @@ window.kairozun.onStopRecording(() => {
 });
 
 // ── System Metrics (from main process) ───────────────────────────────
-window.kairozun.onSystemMetrics(({ cpu, mem }) => {
+window.kairozun.onSystemMetrics(({ cpu, mem, cpuTemp }) => {
   cpuBar.style.width = cpu + '%';
   cpuValue.textContent = cpu + '%';
   memBar.style.width = mem + '%';
   memValue.textContent = mem + '%';
+  // Temperature display
+  if (cpuTemp != null) {
+    const tempEl = document.getElementById('temp-value');
+    tempEl.textContent = cpuTemp + '°C';
+    tempEl.className = 'value ' + (cpuTemp >= 85 ? 'value-bad' : cpuTemp >= 70 ? 'value-warn' : 'value-good');
+  }
 });
 
 // ── Kill Feed ────────────────────────────────────────────────────────
@@ -649,6 +695,76 @@ function checkPanelVisibility() {
   panelTL.classList.toggle('panel-hidden', fpsHidden && pingHidden);
 }
 
+// ── Friends List Rendering (online-only) ─────────────────────────────
+let lastFriendsListKey = '';
+
+function renderFriendsList(friends) {
+  // friends array is already filtered to online-only by caller
+  friends.sort((a, b) => (a.displayName || a.username).localeCompare(b.displayName || b.username));
+
+  friendsOnlineCountEl.textContent = String(friends.length);
+
+  // Hide panel when no friends online (or toggle is off)
+  if (friends.length === 0 || !widgetToggles.showFriendsList) {
+    panelMr.classList.add('panel-hidden');
+    lastFriendsListKey = '';
+    friendsListBodyEl.innerHTML = '';
+    return;
+  }
+  panelMr.classList.remove('panel-hidden');
+
+  const key = friends.map(f => f.id || f.userId).join(',');
+  if (key === lastFriendsListKey) return;
+  lastFriendsListKey = key;
+
+  friendsListBodyEl.innerHTML = '';
+  const frag = document.createDocumentFragment();
+  for (const f of friends) {
+    const row = document.createElement('div');
+    row.className = 'friend-row is-online';
+
+    const avatarWrap = document.createElement('div');
+    avatarWrap.className = 'friend-avatar-wrap';
+
+    if (f.avatarUrl) {
+      const img = document.createElement('img');
+      img.src = f.avatarUrl;
+      img.alt = '';
+      img.loading = 'lazy';
+      img.referrerPolicy = 'no-referrer';
+      img.className = 'friend-avatar';
+      img.onerror = () => { img.style.display = 'none'; };
+      avatarWrap.appendChild(img);
+    } else {
+      const letter = document.createElement('div');
+      letter.className = 'friend-letter';
+      letter.textContent = (f.displayName || f.username || '?')[0].toUpperCase();
+      avatarWrap.appendChild(letter);
+    }
+
+    const dot = document.createElement('div');
+    dot.className = 'friend-status-dot online';
+    avatarWrap.appendChild(dot);
+
+    row.appendChild(avatarWrap);
+
+    const name = document.createElement('span');
+    name.className = 'friend-name';
+    name.textContent = f.displayName || f.username;
+    row.appendChild(name);
+
+    frag.appendChild(row);
+  }
+  friendsListBodyEl.appendChild(frag);
+}
+
+// ── Friends collapse toggle ──────────────────────────────────────────
+friendsCollapseBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  friendsCollapseBtn.classList.toggle('collapsed');
+  friendsListBodyEl.classList.toggle('collapsed');
+});
+
 // ── Hint auto-fade (5 seconds) ──────────────────────────────────────
 const hintPanel = document.getElementById('panel-bc');
 setTimeout(() => {
@@ -676,6 +792,7 @@ function panelScaleOrigin(id) {
   if (id === 'panel-bl') return 'bottom left';
   if (id === 'panel-br') return 'bottom right';
   if (id === 'panel-ml') return 'center left';
+  if (id === 'panel-mr') return 'center right';
   return 'center';
 }
 
@@ -857,6 +974,10 @@ window.kairozun.onApplySettings((settings) => {
   if (settings.showPlayerList !== undefined) {
     widgetToggles.showPlayerList = settings.showPlayerList;
     document.getElementById('panel-ml').classList.toggle('panel-hidden', !settings.showPlayerList);
+  }
+  if (settings.showFriendsList !== undefined) {
+    widgetToggles.showFriendsList = settings.showFriendsList;
+    document.getElementById('panel-mr').classList.toggle('panel-hidden', !settings.showFriendsList);
   }
   if (settings.showClock !== undefined) {
     document.getElementById('panel-br').classList.toggle('panel-hidden', !settings.showClock);

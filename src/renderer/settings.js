@@ -19,6 +19,7 @@ const i18n = {
     showPing: 'Show Ping',
     showAccount: 'Show Account',
     showFriends: 'Show Friends',
+    showFriendsList: 'Show Friends List',
     showGame: 'Show Game Info',
     showPlayers: 'Show Players',
     showServerIp: 'Show Server IP',
@@ -52,6 +53,7 @@ const i18n = {
     hotkeyOverlay: 'Show / Hide Overlay',
     hotkeyScreenshot: 'Screenshot',
     hotkeyRecording: 'Screen Recording',
+    hotkeyQuit: 'Quit Application',
     captureSettings: 'Screen Capture',
     showOnCapture: 'Show on screen recording',
     recordingDuration: 'Recording duration',
@@ -68,6 +70,24 @@ const i18n = {
     updated: 'Updated',
     region: 'Region',
     sessionTime: 'Session',
+    gamePlaying: 'Playing',
+    gameVisits: 'Visits',
+    gameFavs: 'Favs',
+    gameRating: 'Rating',
+    gameGenre: 'Genre',
+    gameCreator: 'Creator',
+    creatorType: 'Creator Type',
+    maxPlayers: 'Max Players',
+    created: 'Created',
+    gameLikes: '👍 Likes',
+    gameDislikes: '👎 Dislikes',
+    serverIp: 'IP',
+    serverPing: 'Ping',
+    serverPlayers: 'Players',
+    serverFps: 'Server FPS',
+    serverCount: 'Servers',
+    placeId: 'Place ID',
+    universeId: 'Universe ID',
     aboutDesc: 'Roblox glass overlay with real-time game data, system monitoring, and draggable HUD panels.',
     scanDiscord: 'Scan to join Discord',
     navHistory: 'History',
@@ -115,6 +135,25 @@ const i18n = {
     gameBadgesLabel: 'Game Badges',
     searchHistory: 'Search History',
     clearSearchHistory: 'Clear',
+    navGallery: 'Gallery',
+    galleryEmpty: 'No screenshots yet. Press F9 to take a screenshot.',
+    collage: 'Collage',
+    collageTitle: 'Create Collage',
+    collageHint: 'Select 2-9 screenshots, then click Create',
+    collageCreate: 'Create',
+    collageCancel: 'Cancel',
+    openFolder: 'Open Folder',
+    editorFilter: 'Filter',
+    filterNone: 'None',
+    editorWatermark: 'Watermark',
+    watermarkHint: 'Drag the watermark on the image to position it',
+    editorEmoji: 'Stickers',
+    editorSave: 'Save to PC',
+    editorReset: 'Reset',
+    editorDelete: 'Delete',
+    ctxEdit: 'Edit',
+    ctxOpenFolder: 'Open Folder',
+    ctxDelete: 'Delete',
   },
   ru: {
     settingsTitle: 'Настройки',
@@ -131,6 +170,7 @@ const i18n = {
     showPing: 'Показать пинг',
     showAccount: 'Показать аккаунт',
     showFriends: 'Показать друзей',
+    showFriendsList: 'Показать список друзей',
     showGame: 'Показать игру',
     showPlayers: 'Показать игроков',
     showServerIp: 'Показать IP сервера',
@@ -164,6 +204,7 @@ const i18n = {
     hotkeyOverlay: 'Показать / Скрыть оверлей',
     hotkeyScreenshot: 'Скриншот',
     hotkeyRecording: 'Запись экрана',
+    hotkeyQuit: 'Закрыть приложение',
     captureSettings: 'Захват экрана',
     showOnCapture: 'Показывать при записи экрана',
     recordingDuration: 'Длительность записи',
@@ -180,6 +221,24 @@ const i18n = {
     updated: 'Обновлено',
     region: 'Регион',
     sessionTime: 'Сессия',
+    gamePlaying: 'Играют',
+    gameVisits: 'Визиты',
+    gameFavs: 'Избранное',
+    gameRating: 'Рейтинг',
+    gameGenre: 'Жанр',
+    gameCreator: 'Создатель',
+    creatorType: 'Тип создателя',
+    maxPlayers: 'Макс. игроков',
+    created: 'Создана',
+    gameLikes: '👍 Лайки',
+    gameDislikes: '👎 Дизлайки',
+    serverIp: 'IP',
+    serverPing: 'Пинг',
+    serverPlayers: 'Игроки',
+    serverFps: 'ФПС сервера',
+    serverCount: 'Серверы',
+    placeId: 'Place ID',
+    universeId: 'Universe ID',
     aboutDesc: 'Roblox стеклянный оверлей с игровыми данными в реальном времени, мониторингом системы и перетаскиваемыми HUD панелями.',
     scanDiscord: 'Сканируй, чтобы войти в Discord',
     navHistory: 'История',
@@ -227,6 +286,25 @@ const i18n = {
     gameBadgesLabel: 'Игровые достижения',
     searchHistory: 'История поиска',
     clearSearchHistory: 'Очистить',
+    navGallery: 'Галерея',
+    galleryEmpty: 'Скриншотов пока нет. Нажмите F9 для снимка экрана.',
+    collage: 'Коллаж',
+    collageTitle: 'Создать коллаж',
+    collageHint: 'Выберите 2-9 скриншотов, затем нажмите Создать',
+    collageCreate: 'Создать',
+    collageCancel: 'Отмена',
+    openFolder: 'Открыть папку',
+    editorFilter: 'Фильтр',
+    filterNone: 'Без',
+    editorWatermark: 'Водяной знак',
+    watermarkHint: 'Перетащите водяной знак на изображение для позиционирования',
+    editorEmoji: 'Стикеры',
+    editorSave: 'Сохранить на ПК',
+    editorReset: 'Сбросить',
+    editorDelete: 'Удалить',
+    ctxEdit: 'Редактировать',
+    ctxOpenFolder: 'Открыть папку',
+    ctxDelete: 'Удалить',
   },
 };
 
@@ -259,6 +337,7 @@ document.querySelectorAll('.nav-btn').forEach((btn) => {
     const tabId = 'tab-' + btn.dataset.tab;
     document.getElementById(tabId).classList.add('active');
     if (btn.dataset.tab === 'history') renderGameHistory();
+    if (btn.dataset.tab === 'gallery') loadGallery();
   });
 });
 
@@ -298,11 +377,12 @@ const chkFavs = document.getElementById('chk-favs');
 const chkRegion = document.getElementById('chk-region');
 const chkUptime = document.getElementById('chk-uptime');
 const chkPlayerList = document.getElementById('chk-playerlist');
+const chkFriendsList = document.getElementById('chk-friendslist');
 const chkCapture = document.getElementById('chk-capture');
 const selRecDuration = document.getElementById('sel-rec-duration');
 const selRecQuality = document.getElementById('sel-rec-quality');
 
-[chkFps, chkPing, chkKill, chkSys, chkAccount, chkFriends, chkGame, chkPlayers, chkServer, chkVisits, chkClock, chkGenre, chkRating, chkFavs, chkRegion, chkUptime, chkPlayerList].forEach((el) => el.addEventListener('change', pushSettings));
+[chkFps, chkPing, chkKill, chkSys, chkAccount, chkFriends, chkFriendsList, chkGame, chkPlayers, chkServer, chkVisits, chkClock, chkGenre, chkRating, chkFavs, chkRegion, chkUptime, chkPlayerList].forEach((el) => el.addEventListener('change', pushSettings));
 
 // Screen capture toggle
 chkCapture.addEventListener('change', () => {
@@ -369,6 +449,7 @@ if (_saved) {
   if (_saved.showRegion !== undefined) chkRegion.checked = _saved.showRegion;
   if (_saved.showUptime !== undefined) chkUptime.checked = _saved.showUptime;
   if (_saved.showPlayerList !== undefined) chkPlayerList.checked = _saved.showPlayerList;
+  if (_saved.showFriendsList !== undefined) chkFriendsList.checked = _saved.showFriendsList;
   if (_saved.showOnCapture !== undefined) chkCapture.checked = _saved.showOnCapture;
   if (_saved.recordingDuration !== undefined) selRecDuration.value = String(_saved.recordingDuration);
   if (_saved.recordingQuality !== undefined) selRecQuality.value = _saved.recordingQuality;
@@ -412,6 +493,7 @@ function pushSettings() {
     showRegion: chkRegion.checked,
     showUptime: chkUptime.checked,
     showPlayerList: chkPlayerList.checked,
+    showFriendsList: chkFriendsList.checked,
     showOnCapture: chkCapture.checked,
     recordingDuration: parseInt(selRecDuration.value, 10),
     recordingQuality: selRecQuality.value,
@@ -611,8 +693,29 @@ window.kairozun.onRobloxData((data) => {
   if (data.gameCreator) {
     document.getElementById('rbx-game-creator').textContent = data.gameCreator;
   }
+  if (data.gameCreatorType) {
+    document.getElementById('rbx-game-creator-type').textContent = data.gameCreatorType;
+  }
+  if (data.gameMaxPlayers != null) {
+    document.getElementById('rbx-game-max-players').textContent = data.gameMaxPlayers;
+  }
+  if (data.gameCreated) {
+    document.getElementById('rbx-game-created').textContent = formatDate(data.gameCreated);
+  }
   if (data.gameUpdated) {
     document.getElementById('rbx-game-updated').textContent = formatDate(data.gameUpdated);
+  }
+  if (data.gameUpVotes != null) {
+    document.getElementById('rbx-game-likes').textContent = formatNumber(data.gameUpVotes);
+  }
+  if (data.gameDownVotes != null) {
+    document.getElementById('rbx-game-dislikes').textContent = formatNumber(data.gameDownVotes);
+  }
+  if (data.gameDescription) {
+    document.getElementById('rbx-game-description').textContent = data.gameDescription;
+    document.getElementById('rbx-game-description-wrap').classList.remove('hidden');
+  } else {
+    document.getElementById('rbx-game-description-wrap').classList.add('hidden');
   }
   if (data.followersCount != null) {
     document.getElementById('rbx-followers').textContent = formatNumber(data.followersCount);
@@ -796,6 +899,9 @@ if (_saved && _saved.hotkeyScreenshot) {
 if (_saved && _saved.hotkeyRecording) {
   document.getElementById('hotkey-recording').textContent = _saved.hotkeyRecording.replace('CommandOrControl', 'Ctrl');
 }
+if (_saved && _saved.hotkeyQuit) {
+  document.getElementById('hotkey-quit').textContent = _saved.hotkeyQuit.replace('CommandOrControl', 'Ctrl');
+}
 
 function keyEventToAccelerator(e) {
   const parts = [];
@@ -879,7 +985,8 @@ hotkeySaveBtn.addEventListener('click', () => {
     // Persist via settings
     const settingsKey = currentHotkeyAction === 'settings' ? 'hotkeySettings'
       : currentHotkeyAction === 'screenshot' ? 'hotkeyScreenshot'
-      : currentHotkeyAction === 'recording' ? 'hotkeyRecording' : 'hotkeyOverlay';
+      : currentHotkeyAction === 'recording' ? 'hotkeyRecording'
+      : currentHotkeyAction === 'quit' ? 'hotkeyQuit' : 'hotkeyOverlay';
     const patch = {};
     patch[settingsKey] = recordedAccelerator;
     window.kairozun.updateSettings(patch);
@@ -896,9 +1003,12 @@ function escapeSettingsHtml(str) {
   return d.innerHTML;
 }
 
-function renderGameHistory() {
+let historyLoaded = false;
+function renderGameHistory(force) {
+  if (historyLoaded && !force) return;
   const list = document.getElementById('history-list');
   const history = window.kairozun.getGameHistory();
+  historyLoaded = true;
   const t = i18n[currentLang] || i18n.en;
   if (!history || history.length === 0) {
     list.innerHTML = '<div class="history-empty">' + (t.historyEmpty || 'No games recorded yet') + '</div>';
@@ -920,7 +1030,7 @@ function renderGameHistory() {
     const endTimeStr = endDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     return '<div class="history-entry-wrap">' +
       '<div class="history-entry" data-idx="' + idx + '">' +
-        (entry.gameIcon ? '<img class="history-icon" src="' + escapeSettingsHtml(entry.gameIcon) + '" width="32" height="32">' : '<div class="history-icon-placeholder">?</div>') +
+        (entry.gameIcon ? '<img class="history-icon" data-lazy-src="' + escapeSettingsHtml(entry.gameIcon) + '" width="32" height="32">' : '<div class="history-icon-placeholder">?</div>') +
         '<div class="history-info">' +
           '<div class="history-name">' + escapeSettingsHtml(entry.gameName) + '</div>' +
           '<div class="history-meta">' + dateStr + ' ' + timeOfDay + ' \u2022 ' + timeStr + (entry.serverRegion ? ' \u2022 ' + escapeSettingsHtml(entry.serverRegion) : '') + '</div>' +
@@ -938,6 +1048,21 @@ function renderGameHistory() {
       '</div>' +
     '</div>';
   }).join('');
+
+  // Lazy-load history icons via IntersectionObserver
+  const historyIcons = list.querySelectorAll('img[data-lazy-src]');
+  if (historyIcons.length > 0) {
+    const historyObserver = new IntersectionObserver((entries, obs) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        const img = entry.target;
+        img.src = img.dataset.lazySrc;
+        img.removeAttribute('data-lazy-src');
+        obs.unobserve(img);
+      }
+    }, { rootMargin: '100px' });
+    historyIcons.forEach(img => historyObserver.observe(img));
+  }
   // Expand/collapse event handlers
   list.querySelectorAll('.history-expand-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
@@ -959,6 +1084,7 @@ function renderGameHistory() {
       e.stopPropagation();
       const idx = parseInt(btn.dataset.idx);
       window.kairozun.deleteHistoryEntry(idx);
+      historyLoaded = false;
       renderGameHistory();
     });
   });
@@ -1132,3 +1258,179 @@ document.getElementById('search-history-clear').addEventListener('click', () => 
 });
 
 renderSearchHistory();
+
+// ── Screenshot Gallery ──────────────────────────────────────────────────────
+const galleryGrid = document.getElementById('gallery-grid');
+let galleryScreenshots = []; // cached list from IPC
+let galleryThumbCache = {}; // name -> base64 data URL (in-memory only)
+const THUMB_CACHE_MAX = 30; // max thumbnails to keep in memory
+let galleryLoaded = false;
+
+async function loadGallery(force) {
+  if (galleryLoaded && !force) return;
+  galleryScreenshots = await window.kairozun.getScreenshots();
+  galleryLoaded = true;
+  renderGallery();
+}
+
+// IntersectionObserver for lazy-loading gallery thumbnails on scroll
+let galleryObserver = null;
+
+function renderGallery() {
+  const t = i18n[currentLang] || i18n.en;
+  if (galleryObserver) { galleryObserver.disconnect(); galleryObserver = null; }
+  if (!galleryScreenshots || galleryScreenshots.length === 0) {
+    galleryGrid.innerHTML = '<div class="gallery-empty">' + (t.galleryEmpty || 'No screenshots yet. Press F9 to take a screenshot.') + '</div>';
+    return;
+  }
+  galleryGrid.innerHTML = '';
+  const frag = document.createDocumentFragment();
+  for (const ss of galleryScreenshots) {
+    const thumb = document.createElement('div');
+    thumb.className = 'gallery-thumb';
+    thumb.dataset.path = ss.path;
+    thumb.dataset.name = ss.name;
+
+    const img = document.createElement('img');
+    img.alt = ss.name;
+    // Use cached thumbnail or mark for lazy load
+    if (galleryThumbCache[ss.name]) {
+      img.src = galleryThumbCache[ss.name];
+    } else {
+      img.src = '';
+      img.dataset.loadPath = ss.path;
+      img.dataset.loadName = ss.name;
+    }
+    thumb.appendChild(img);
+
+    const dateDiv = document.createElement('div');
+    dateDiv.className = 'gallery-thumb-date';
+    const d = new Date(ss.mtime);
+    dateDiv.textContent = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    thumb.appendChild(dateDiv);
+
+    thumb.addEventListener('click', () => openPhotoEditor(ss));
+    thumb.addEventListener('contextmenu', (e) => showContextMenu(e, ss));
+    frag.appendChild(thumb);
+  }
+  galleryGrid.appendChild(frag);
+
+  // Use IntersectionObserver for smooth lazy-loading as user scrolls
+  // Throttle: max 2 concurrent loads to avoid lag
+  let loadingCount = 0;
+  const loadQueue = [];
+
+  function processQueue() {
+    while (loadingCount < 2 && loadQueue.length > 0) {
+      const { img, p, name } = loadQueue.shift();
+      loadingCount++;
+      window.kairozun.readScreenshotThumb(p).then(base64 => {
+        if (base64) {
+          const dataUrl = 'data:image/jpeg;base64,' + base64;
+          img.src = dataUrl;
+          const keys = Object.keys(galleryThumbCache);
+          if (keys.length >= THUMB_CACHE_MAX) delete galleryThumbCache[keys[0]];
+          galleryThumbCache[name] = dataUrl;
+        }
+      }).catch(() => {}).finally(() => {
+        loadingCount--;
+        processQueue();
+      });
+    }
+  }
+
+  galleryObserver = new IntersectionObserver((entries) => {
+    for (const entry of entries) {
+      if (!entry.isIntersecting) continue;
+      const img = entry.target;
+      const p = img.dataset.loadPath;
+      const name = img.dataset.loadName;
+      if (!p) continue;
+      galleryObserver.unobserve(img);
+      img.removeAttribute('data-load-path');
+      img.removeAttribute('data-load-name');
+      loadQueue.push({ img, p, name });
+    }
+    processQueue();
+  }, { rootMargin: '200px' });
+
+  galleryGrid.querySelectorAll('img[data-load-path]').forEach(img => {
+    galleryObserver.observe(img);
+  });
+}
+
+document.getElementById('gallery-open-folder').addEventListener('click', () => {
+  window.kairozun.openScreenshotsFolder();
+});
+
+document.getElementById('gallery-refresh').addEventListener('click', () => {
+  loadGallery(true);
+});
+
+// Auto-refresh gallery when a screenshot is taken
+window.kairozun.onScreenshotTaken(() => {
+  galleryLoaded = false;
+  setTimeout(() => loadGallery(), 300);
+});
+
+// ── Gallery Right-Click Context Menu ────────────────────────────────────────
+const ctxMenu = document.getElementById('gallery-context-menu');
+let ctxMenuTarget = null; // screenshot object
+
+function showContextMenu(e, ss) {
+  e.preventDefault();
+  e.stopPropagation();
+  ctxMenuTarget = ss;
+  ctxMenu.style.left = e.clientX + 'px';
+  ctxMenu.style.top = e.clientY + 'px';
+  ctxMenu.classList.remove('hidden');
+  // Ensure menu stays within viewport
+  requestAnimationFrame(() => {
+    const rect = ctxMenu.getBoundingClientRect();
+    if (rect.right > window.innerWidth) ctxMenu.style.left = (e.clientX - rect.width) + 'px';
+    if (rect.bottom > window.innerHeight) ctxMenu.style.top = (e.clientY - rect.height) + 'px';
+  });
+}
+
+function hideContextMenu() {
+  ctxMenu.classList.add('hidden');
+  ctxMenuTarget = null;
+}
+
+document.addEventListener('click', hideContextMenu);
+document.addEventListener('contextmenu', (e) => {
+  if (!e.target.closest('.gallery-thumb')) hideContextMenu();
+});
+
+document.getElementById('ctx-menu-open-editor').addEventListener('click', () => {
+  if (ctxMenuTarget) openPhotoEditor(ctxMenuTarget);
+  hideContextMenu();
+});
+
+document.getElementById('ctx-menu-open-folder').addEventListener('click', () => {
+  window.kairozun.openScreenshotsFolder();
+  hideContextMenu();
+});
+
+document.getElementById('ctx-menu-delete').addEventListener('click', async () => {
+  if (!ctxMenuTarget) return;
+  const ok = await window.kairozun.deleteScreenshot(ctxMenuTarget.path);
+  if (ok) {
+    delete galleryThumbCache[ctxMenuTarget.name];
+    galleryLoaded = false;
+    loadGallery();
+  }
+  hideContextMenu();
+});
+
+// ── Photo Editor (separate window) ──────────────────────────────────────────
+function openPhotoEditor(ss) {
+  window.kairozun.openEditor({ filePath: ss.path, fileName: ss.name, lang: currentLang });
+}
+
+// ── Collage Feature ─────────────────────────────────────────────────────────────
+
+document.getElementById('gallery-collage-btn').addEventListener('click', () => {
+  if (!galleryScreenshots || galleryScreenshots.length < 2) return;
+  window.kairozun.openCollage({ lang: currentLang });
+});

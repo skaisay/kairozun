@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, screen, globalShortcut, Tray, Menu, shell, desktopCapturer } = require('electron');
+const { app, BrowserWindow, ipcMain, screen, globalShortcut, Tray, Menu, shell, desktopCapturer, clipboard, nativeImage, dialog } = require('electron');
 const path = require('path');
 const os = require('os');
 const fs = require('fs');
@@ -136,6 +136,23 @@ let gameHistory = [];
 let currentGameStart = null;
 let currentGameUniverseId = null;
 
+// ── Screenshot Metadata ─────────────────────────────────────────────
+const SCREENSHOT_META_PATH = path.join(app.getPath('userData'), 'screenshots-meta.json');
+let screenshotMeta = {};
+
+function loadScreenshotMeta() {
+  try {
+    if (fs.existsSync(SCREENSHOT_META_PATH)) {
+      const data = JSON.parse(fs.readFileSync(SCREENSHOT_META_PATH, 'utf8'));
+      if (data && typeof data === 'object') screenshotMeta = data;
+    }
+  } catch { screenshotMeta = {}; }
+}
+
+function saveScreenshotMeta() {
+  try { fs.writeFileSync(SCREENSHOT_META_PATH, JSON.stringify(screenshotMeta)); } catch {}
+}
+
 function loadGameHistory() {
   try {
     if (fs.existsSync(HISTORY_PATH)) {
@@ -157,6 +174,10 @@ if (!gotSingleLock) {
 
 let overlayWindow = null;
 let settingsWindow = null;
+let editorWindow = null;
+let editorInitData = null;
+let collageWindow = null;
+let collageInitData = null;
 let tray = null;
 let overlayHiddenByUser = false; // track overlay visibility via opacity (not hide/show)
 
@@ -176,8 +197,8 @@ function findLatestRobloxLog() {
   try {
     if (!fs.existsSync(ROBLOX_LOG_DIR)) return null;
     const now = Date.now();
-    // Only rescan directory every 15s — directory listing is expensive on HDDs
-    if (!cachedLogList || now - lastLogDirScan > 15000) {
+    // Only rescan directory every 5s — fast enough for responsiveness
+    if (!cachedLogList || now - lastLogDirScan > 5000) {
       lastLogDirScan = now;
       cachedLogList = fs.readdirSync(ROBLOX_LOG_DIR)
         .filter(f => f.endsWith('.log'));
@@ -471,6 +492,10 @@ async function fetchRobloxApiById(userId) {
   } catch { /* ignore API errors */ }
 }
 
+// ── Friends data (shared with fetchServerPlayerList) ─────────────────
+let friendsAvatarCache = {}; // userId -> imageUrl
+let lastFriendsAvatarFetch = 0;
+
 let robloxPlaceId = null;
 let robloxUniverseId = null;
 
@@ -479,7 +504,7 @@ async function fetchGameInfo() {
   try {
     const [gameResp, iconResp] = await Promise.all([
       httpsGet(`https://games.roblox.com/v1/games?universeIds=${robloxUniverseId}`),
-      httpsGet(`https://thumbnails.roblox.com/v1/games/icons?universeIds=${robloxUniverseId}&size=50x50&format=Png&isCircular=false`),
+      httpsGet(`https://thumbnails.roblox.com/v1/games/icons?universeIds=${robloxUniverseId}&size=512x512&format=Png&isCircular=false`),
     ]);
     if (gameResp && gameResp.data && gameResp.data[0]) {
       const g = gameResp.data[0];
@@ -647,6 +672,7 @@ async function fetchServerPlayers() {
 async function fetchPlayerThumbnails() { /* Roblox removed playerTokens from servers API */ }
 
 // Fetch server players: own user + friends on same server
+// Also builds friendsList for the friends widget (reuses same API calls)
 async function fetchServerPlayerList() {
   if (!robloxUserId) return;
   const jobId = robloxJobIdFromLog || robloxApiData.gameId;
@@ -662,46 +688,105 @@ async function fetchServerPlayerList() {
     isSelf: true,
   });
 
-  // 2. Get friends list and check who's on same server
+  // 2. Get friends list, presence, and avatars in one flow
+  let allFriends = [];
   try {
     const friendsResp = await httpsGet(`https://friends.roblox.com/v1/users/${robloxUserId}/friends`);
     if (friendsResp && friendsResp.data && friendsResp.data.length > 0) {
-      const friendIds = friendsResp.data.map(f => f.id);
-      const presenceResp = await httpsPost('https://presence.roblox.com/v1/presence/users', { userIds: friendIds.slice(0, 100) });
-      if (presenceResp && presenceResp.userPresences) {
-        const onServer = presenceResp.userPresences.filter(p =>
-          p.userPresenceType === 2 && p.gameId && jobId && p.gameId === jobId
-        );
-        if (onServer.length > 0) {
-          const ids = onServer.map(p => p.userId);
-          const avatarResp = await httpsGet(
-            `https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${ids.join(',')}&size=150x150&format=Png`
-          );
-          const avatarMap = {};
-          if (avatarResp && avatarResp.data) {
-            for (const a of avatarResp.data) {
-              if (a.imageUrl) avatarMap[a.targetId] = a.imageUrl;
-            }
+      allFriends = friendsResp.data;
+
+      // Debug: log raw friend data once
+      if (!fetchServerPlayerList._dbg1) {
+        fetchServerPlayerList._dbg1 = true;
+        const sample = allFriends[0];
+        console.log('[Friends] Raw sample:', JSON.stringify({
+          id: sample.id, name: sample.name, isOnline: sample.isOnline,
+          presenceType: sample.presenceType, userPresenceType: sample.userPresenceType,
+        }));
+        console.log('[Friends] Total:', allFriends.length,
+          'isOnline=true:', allFriends.filter(f => f.isOnline).length);
+      }
+
+      // Try Presence API for accurate online status
+      const friendIds = allFriends.map(f => f.id);
+      const presenceMap = {}; // userId -> {type, gameId}
+      for (let i = 0; i < friendIds.length; i += 100) {
+        const batch = friendIds.slice(i, i + 100);
+        const presenceResp = await httpsPost('https://presence.roblox.com/v1/presence/users', { userIds: batch });
+
+        // Debug: log presence response once
+        if (!fetchServerPlayerList._dbg2) {
+          fetchServerPlayerList._dbg2 = true;
+          if (presenceResp && presenceResp.userPresences) {
+            const online = presenceResp.userPresences.filter(p => p.userPresenceType >= 1);
+            console.log('[Friends] Presence API works! Online:', online.length, '/', presenceResp.userPresences.length);
+            if (online.length > 0) console.log('[Friends] Online sample:', JSON.stringify(online[0]));
+          } else {
+            console.log('[Friends] Presence API failed or empty:', JSON.stringify(presenceResp));
           }
-          for (const p of onServer) {
-            const friend = friendsResp.data.find(f => f.id === p.userId);
-            if (friend) {
-              players.push({
-                userId: p.userId,
-                username: friend.name,
-                displayName: friend.displayName || friend.name,
-                avatarUrl: avatarMap[p.userId] || null,
-                isFriend: true,
-              });
+        }
+
+        if (presenceResp && presenceResp.userPresences) {
+          for (const p of presenceResp.userPresences) {
+            presenceMap[p.userId] = { type: p.userPresenceType, gameId: p.gameId };
+          }
+        }
+      }
+
+      const hasPresenceData = Object.keys(presenceMap).length > 0;
+
+      // Fetch avatars for friends (cached — only re-fetch every 5 min)
+      const now = Date.now();
+      if (now - lastFriendsAvatarFetch >= 300000 || Object.keys(friendsAvatarCache).length === 0) {
+        lastFriendsAvatarFetch = now;
+        for (let i = 0; i < friendIds.length; i += 100) {
+          const batch = friendIds.slice(i, i + 100);
+          const thumbResp = await httpsGet(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${batch.join(',')}&size=150x150&format=Png`);
+          if (thumbResp && thumbResp.data) {
+            for (const t of thumbResp.data) {
+              if (t.imageUrl) friendsAvatarCache[t.targetId] = t.imageUrl;
             }
           }
         }
       }
+
+      // Build friendsList for friends widget (online friends only)
+      // AND add same-server friends to player list
+      const friendsList = [];
+      for (const f of allFriends) {
+        const presence = presenceMap[f.id];
+        // Determine online status: prefer Presence API, fallback to friends endpoint isOnline
+        const presType = presence ? presence.type : (f.presenceType || 0);
+        const isOnline = hasPresenceData ? (presType >= 1) : (f.isOnline === true);
+        const onSameServer = presence && presence.type === 2 && presence.gameId && jobId && presence.gameId === jobId;
+
+        friendsList.push({
+          id: f.id,
+          username: f.name,
+          displayName: f.displayName,
+          isOnline,
+          presenceType: presType,
+          avatarUrl: friendsAvatarCache[f.id] || null,
+        });
+
+        // Add to server player list if on same server
+        if (onSameServer) {
+          players.push({
+            userId: f.id,
+            username: f.name,
+            displayName: f.displayName || f.name,
+            avatarUrl: friendsAvatarCache[f.id] || null,
+            isFriend: true,
+          });
+        }
+      }
+      robloxApiData.friendsList = friendsList;
     }
-  } catch { /* ignore */ }
+  } catch (e) {
+    console.log('[Friends] Error:', e.message);
+  }
 
   // 3. Fill remaining slots with anonymous placeholders
-  // (Roblox removed playerTokens — no way to get anonymous player avatars anymore)
   const totalOnServer = robloxApiData.serverPlayerCount || 1;
   const knownCount = players.length;
   const remaining = Math.max(0, totalOnServer - knownCount);
@@ -722,9 +807,9 @@ async function fetchServerPlayerList() {
 }
 
 // Fetch API data periodically
-// Fast loop (8s): game info, presence — for live data
-// Server loop (12s): server players — heavier call, separate to avoid rate limits
-// Slow loop (40s): user info, votes, followers — rarely change
+// Fast loop (4s): game info, presence — for live data
+// Server loop (6s): server players — heavier call, separate to avoid rate limits
+// Slow loop (30s): user info, votes, followers — rarely change
 let apiFastInterval = null;
 let apiSlowInterval = null;
 let apiServerInterval = null;
@@ -754,11 +839,11 @@ async function doImmediateFullFetch() {
       fetchUserInfo(),
       fetchFollowersCount(),
     ]);
-    // Server players need placeId from above calls
+    // Server players + friends list
     if (robloxPlaceId) {
       await fetchServerPlayers();
-      await fetchServerPlayerList();
     }
+    await fetchServerPlayerList();
   } catch { /* ignore */ }
 }
 
@@ -773,15 +858,21 @@ function startApiLoop() {
       if (!robloxApiData.avatarUrl && robloxUserId) await fetchRobloxApiById(robloxUserId);
       await Promise.all([fetchGameInfo(), fetchUserPresence()]);
     } finally { apiFastBusy = false; }
-  }, 8000);
+  }, 4000);
   apiServerInterval = setInterval(async () => {
-    if (apiServerBusy || !robloxRunning || (!robloxInGame && robloxApiData.presenceType !== 2) || !robloxPlaceId) return;
+    if (apiServerBusy || !robloxRunning || (!robloxInGame && robloxApiData.presenceType !== 2)) return;
     apiServerBusy = true;
     try {
-      await fetchServerPlayers();
-      await fetchServerPlayerList();
+      const tasks = [];
+      if (robloxPlaceId) {
+        tasks.push(fetchServerPlayers(), fetchServerPlayerList());
+      } else if (robloxUserId) {
+        // No placeId yet but have userId — still fetch friends list
+        tasks.push(fetchServerPlayerList());
+      }
+      if (tasks.length > 0) await Promise.all(tasks);
     } finally { apiServerBusy = false; }
-  }, 12000);
+  }, 6000);
   apiSlowInterval = setInterval(async () => {
     if (apiSlowBusy || !robloxRunning || (!robloxInGame && robloxApiData.presenceType !== 2) || !robloxUserId) return;
     apiSlowBusy = true;
@@ -789,7 +880,7 @@ function startApiLoop() {
       await fetchRobloxApiById(robloxUserId);
       await Promise.all([fetchGameVotes(), fetchUserInfo(), fetchFollowersCount()]);
     } finally { apiSlowBusy = false; }
-  }, 40000);
+  }, 30000);
 }
 
 // Cache Roblox PID to avoid calling tasklist every cycle
@@ -845,6 +936,7 @@ function startRobloxWatcher() {
   // Track last sent data to avoid redundant IPC
   let lastSentDataJson = '';
   let watcherTicks = 0;
+  let firstFetchTriggered = false;
   const doWatcherTick = () => {
       checkRobloxRunning((running) => {
         robloxRunning = running;
@@ -939,7 +1031,7 @@ function startRobloxWatcher() {
                 robloxJobIdFromLog = null;
                 // Keep robloxUserId/robloxUsername — user is still logged in
                 // Clear game-specific API data but keep user data
-                const keepKeys = ['avatarUrl', 'username', 'displayName', 'friendsCount',
+                const keepKeys = ['avatarUrl', 'username', 'displayName', 'friendsCount', 'friendsList',
                   'accountCreated', 'description', 'isBanned', 'hasVerifiedBadge', 'presenceType', 'lastLocation'];
                 const kept = {};
                 for (const k of keepKeys) {
@@ -956,10 +1048,16 @@ function startRobloxWatcher() {
               if (currentlyInGame && !robloxUserId) {
                 if (robloxUserIdFromLog) {
                   robloxUserId = parseInt(robloxUserIdFromLog);
-                  doImmediateFullFetch();
+                  if (!firstFetchTriggered) { firstFetchTriggered = true; doImmediateFullFetch(); }
+                  else doImmediateFullFetch();
                 } else if (robloxUsername) {
-                  doImmediateFullFetch();
+                  if (!firstFetchTriggered) { firstFetchTriggered = true; doImmediateFullFetch(); }
+                  else doImmediateFullFetch();
                 }
+              } else if (currentlyInGame && !firstFetchTriggered && robloxUserId) {
+                // Trigger immediate fetch on very first tick if we already have userId
+                firstFetchTriggered = true;
+                doImmediateFullFetch();
               } else if (currentlyInGame && (newUniverseDetected || justJoinedGame)) {
                 // New game or fresh join — fetch everything immediately
                 doImmediateFullFetch();
@@ -1031,6 +1129,8 @@ function startRobloxWatcher() {
           robloxInGame = false;
           lastInGameState = false;
           robloxApiData = {};
+          friendsAvatarCache = {};
+          lastFriendsAvatarFetch = 0;
         }
         const send = (win) => {
           if (win && !win.isDestroyed()) win.webContents.send('roblox-data', robloxData);
@@ -1044,6 +1144,12 @@ function startRobloxWatcher() {
           robloxData.gameRating, robloxData.totalServers,
           robloxData.serverRegion, robloxData.followersCount,
           robloxData.serverPlayerList ? robloxData.serverPlayerList.length : 0,
+          robloxData.gamePlaying, robloxData.displayName,
+          robloxData.presenceType, robloxData.gameIcon,
+          robloxData.gameDescription, robloxData.gameCreatorType,
+          robloxData.gameMaxPlayers, robloxData.gameUpVotes,
+          robloxData.friendsList ? robloxData.friendsList.length : 0,
+          robloxData.friendsList ? robloxData.friendsList.filter(f => f.isOnline).length : 0,
         ].join('|');
         if (fp !== lastSentDataJson) {
           lastSentDataJson = fp;
@@ -1052,15 +1158,15 @@ function startRobloxWatcher() {
         }
       });
   };
-  // First tick immediately, then adaptive: 2s for first 30s, then 5s
+  // First tick immediately, then 2s for first 60s, then 3s steady
   doWatcherTick();
   robloxInterval = setInterval(() => {
     watcherTicks++;
     doWatcherTick();
-    // Switch to 5s interval after ~30s (15 ticks × 2s)
-    if (watcherTicks === 15 && robloxInterval) {
+    // Switch to 3s interval after ~60s (30 ticks × 2s)
+    if (watcherTicks === 30 && robloxInterval) {
       clearInterval(robloxInterval);
-      robloxInterval = setInterval(doWatcherTick, 5000);
+      robloxInterval = setInterval(doWatcherTick, 3000);
     }
   }, 2000);
 }
@@ -1094,6 +1200,13 @@ function createOverlay() {
   overlayWindow.loadFile(path.join(__dirname, 'renderer', 'overlay.html'));
   overlayWindow.setAlwaysOnTop(true, 'screen-saver');
   overlayHiddenByUser = false;
+
+  // Periodically re-assert always-on-top — Roblox fullscreen can steal Z-order
+  const ontopInterval = setInterval(() => {
+    if (!overlayWindow || overlayWindow.isDestroyed()) { clearInterval(ontopInterval); return; }
+    overlayWindow.setAlwaysOnTop(true, 'screen-saver');
+  }, 3000);
+  overlayWindow.on('closed', () => clearInterval(ontopInterval));
 }
 
 // Toggle overlay visibility via opacity — avoids show()/hide() which
@@ -1143,6 +1256,21 @@ async function takeScreenshot() {
     const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
     const filePath = path.join(CAPTURE_DIR, `Kairozun_${ts}.png`);
     fs.writeFileSync(filePath, image.toPNG());
+
+    // Save game metadata alongside screenshot
+    if (robloxApiData.gameIcon || robloxApiData.gameName) {
+      const fname = path.basename(filePath);
+      screenshotMeta[fname] = {
+        gameIcon: robloxApiData.gameIcon || null,
+        gameName: robloxApiData.gameName || null,
+      };
+      saveScreenshotMeta();
+    }
+
+    // Notify settings window that a new screenshot was taken
+    if (settingsWindow && !settingsWindow.isDestroyed()) {
+      settingsWindow.webContents.send('screenshot-taken', filePath);
+    }
   } catch {
     // Restore overlay on error
     if (overlayWindow && !overlayWindow.isDestroyed() && !overlayHiddenByUser) {
@@ -1198,7 +1326,7 @@ function createSettingsWindow() {
     height: 520,
     transparent: true,
     frame: false,
-    resizable: false,
+    resizable: true,
     alwaysOnTop: true,
     skipTaskbar: true,
     hasShadow: false,
@@ -1235,6 +1363,71 @@ function getCpuUsage() {
 }
 
 let prevCpu = getCpuUsage();
+
+// ── CPU Temperature ──────────────────────────────────────────────────
+let lastCpuTemp = null;
+const TEMP_FILE = path.join(app.getPath('temp'), 'kairozun_cpu_temp.txt');
+let tempHelperStarted = false;
+
+function startTempHelper() {
+  // Write a helper PS1 script that loops every 5s and writes temp to file
+  const ps1Path = path.join(app.getPath('temp'), 'kairozun_temp_helper.ps1');
+  const script = `
+while ($true) {
+  try {
+    $max = (Get-CimInstance MSAcpi_ThermalZoneTemperature -Namespace root/WMI -EA Stop | Measure-Object -Property CurrentTemperature -Maximum).Maximum
+    if ($max -gt 0) {
+      [math]::Round(($max / 10) - 273.15) | Out-File -FilePath '${TEMP_FILE.replace(/\\/g, '\\\\')}' -Encoding ascii -Force
+    }
+  } catch {
+    try {
+      $max = (Get-CimInstance Win32_PerfFormattedData_Counters_ThermalZoneInformation -EA Stop | Measure-Object -Property Temperature -Maximum).Maximum
+      if ($max -gt 273) {
+        [math]::Round($max - 273.15) | Out-File -FilePath '${TEMP_FILE.replace(/\\/g, '\\\\')}' -Encoding ascii -Force
+      }
+    } catch {}
+  }
+  Start-Sleep -Seconds 5
+}
+`;
+  try {
+    fs.writeFileSync(ps1Path, script);
+    // Try elevated first (for MSAcpi access), fall back to normal
+    try {
+      spawnProcess('powershell', [
+        '-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden',
+        '-ExecutionPolicy', 'Bypass', '-File', ps1Path
+      ], { detached: true, stdio: 'ignore', windowsHide: true }).unref();
+    } catch { /* ignore */ }
+    tempHelperStarted = true;
+  } catch { /* ignore */ }
+}
+
+function pollCpuTemp() {
+  try {
+    if (!fs.existsSync(TEMP_FILE)) return;
+    const val = parseInt(fs.readFileSync(TEMP_FILE, 'utf8').trim());
+    if (!isNaN(val) && val > 0 && val < 150) lastCpuTemp = val;
+  } catch { /* ignore */ }
+}
+
+// Start helper and poll
+startTempHelper();
+setInterval(pollCpuTemp, 5000);
+// Also do a direct fallback poll immediately
+(function directPoll() {
+  execFile('powershell', [
+    '-NoProfile', '-NonInteractive', '-Command',
+    "try{(Get-CimInstance Win32_PerfFormattedData_Counters_ThermalZoneInformation -EA Stop|Measure-Object -Property Temperature -Maximum).Maximum}catch{''}"
+  ], { timeout: 6000 }, (err, stdout) => {
+    if (err || !stdout) return;
+    const kelvin = parseInt(stdout.trim());
+    if (!isNaN(kelvin) && kelvin > 273) {
+      const celsius = Math.round(kelvin - 273.15);
+      if (celsius > 0 && celsius < 150 && lastCpuTemp === null) lastCpuTemp = celsius;
+    }
+  });
+})();
 
 // ── Collect static system info once ──────────────────────────────────
 let gpuInfo = null;
@@ -1312,6 +1505,7 @@ function startSystemMetrics() {
     const metrics = {
       cpu: cpuPercent,
       mem: memPercent,
+      cpuTemp: lastCpuTemp,
       totalMemGB: +(cachedTotalMem / 1073741824).toFixed(1),
       usedMemGB: +(usedMem / 1073741824).toFixed(1),
       freeMemGB: +(freeMem / 1073741824).toFixed(1),
@@ -1373,6 +1567,115 @@ ipcMain.on('close-settings', () => {
 
 ipcMain.on('minimize-settings', () => {
   if (settingsWindow && !settingsWindow.isDestroyed()) settingsWindow.minimize();
+});
+
+// ── Editor Window ──────────────────────────────────────────────────
+ipcMain.on('open-editor', (_e, { filePath, fileName, lang }) => {
+  if (editorWindow && !editorWindow.isDestroyed()) {
+    editorWindow.focus();
+    return;
+  }
+  // Use saved metadata for this screenshot, fall back to current game data
+  const meta = screenshotMeta[path.basename(filePath)] || {};
+  editorInitData = {
+    filePath,
+    fileName,
+    lang: lang || 'en',
+    gameIcon: meta.gameIcon || robloxApiData.gameIcon || null,
+    gameName: meta.gameName || robloxApiData.gameName || null,
+  };
+  editorWindow = new BrowserWindow({
+    width: 1200,
+    height: 840,
+    transparent: true,
+    frame: false,
+    resizable: true,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    hasShadow: false,
+    fullscreenable: false,
+    backgroundColor: '#00000000',
+    icon: ICON_PATH,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload-editor.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+  editorWindow.loadFile(path.join(__dirname, 'renderer', 'editor.html'));
+  editorWindow.on('closed', () => {
+    editorWindow = null;
+    editorInitData = null;
+    // Refresh gallery in settings
+    if (settingsWindow && !settingsWindow.isDestroyed()) {
+      settingsWindow.webContents.send('screenshot-taken', '');
+    }
+  });
+});
+
+ipcMain.on('get-editor-init', (e) => {
+  e.returnValue = editorInitData || {};
+});
+
+// Import photo from file picker (for editor)
+ipcMain.handle('pick-import-photo', async () => {
+  const parent = editorWindow && !editorWindow.isDestroyed() ? editorWindow : null;
+  const result = await dialog.showOpenDialog(parent, {
+    properties: ['openFile'],
+    filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'bmp', 'webp'] }],
+  });
+  if (result.canceled || !result.filePaths.length) return null;
+  try {
+    const buf = fs.readFileSync(result.filePaths[0]);
+    return buf.toString('base64');
+  } catch { return null; }
+});
+
+ipcMain.on('close-editor', () => {
+  if (editorWindow && !editorWindow.isDestroyed()) editorWindow.close();
+});
+
+// ── Collage Window ──────────────────────────────────────────────────
+ipcMain.on('open-collage', (_e, { lang }) => {
+  if (collageWindow && !collageWindow.isDestroyed()) {
+    collageWindow.focus();
+    return;
+  }
+  collageInitData = { lang: lang || 'en' };
+  collageWindow = new BrowserWindow({
+    width: 1100,
+    height: 750,
+    transparent: true,
+    frame: false,
+    resizable: true,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    hasShadow: false,
+    fullscreenable: false,
+    backgroundColor: '#00000000',
+    icon: ICON_PATH,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload-collage.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+  collageWindow.loadFile(path.join(__dirname, 'renderer', 'collage.html'));
+  collageWindow.on('closed', () => {
+    collageWindow = null;
+    collageInitData = null;
+    if (settingsWindow && !settingsWindow.isDestroyed()) {
+      settingsWindow.webContents.send('screenshot-taken', '');
+    }
+  });
+});
+
+ipcMain.on('get-collage-init', (e) => {
+  e.returnValue = collageInitData || {};
+});
+
+ipcMain.on('close-collage', () => {
+  if (collageWindow && !collageWindow.isDestroyed()) collageWindow.close();
 });
 
 ipcMain.on('get-settings', (e) => {
@@ -1462,21 +1765,113 @@ ipcMain.handle('lookup-player', async (_e, username) => {
   }
 });
 
+// ── Screenshot Gallery IPC ───────────────────────────────────────────
+ipcMain.handle('get-screenshots', async () => {
+  try {
+    if (!fs.existsSync(CAPTURE_DIR)) return [];
+    const files = fs.readdirSync(CAPTURE_DIR)
+      .filter(f => /\.(png|jpg|jpeg)$/i.test(f))
+      .map(f => {
+        try {
+          const full = path.join(CAPTURE_DIR, f);
+          const stat = fs.statSync(full);
+          return { name: f, path: full, mtime: stat.mtimeMs, size: stat.size };
+        } catch { return null; }
+      })
+      .filter(Boolean)
+      .sort((a, b) => b.mtime - a.mtime)
+      .slice(0, 100); // limit to 100 most recent
+    return files;
+  } catch { return []; }
+});
+
+ipcMain.handle('read-screenshot', async (_e, filePath) => {
+  try {
+    // Validate path is inside CAPTURE_DIR to prevent directory traversal
+    const resolved = path.resolve(filePath);
+    const captureResolved = path.resolve(CAPTURE_DIR);
+    if (!resolved.startsWith(captureResolved + path.sep) && resolved !== captureResolved) {
+      return null;
+    }
+    if (!fs.existsSync(resolved)) return null;
+    const buf = fs.readFileSync(resolved);
+    return buf.toString('base64');
+  } catch { return null; }
+});
+
+ipcMain.handle('read-screenshot-thumb', async (_e, filePath) => {
+  try {
+    const resolved = path.resolve(filePath);
+    const captureResolved = path.resolve(CAPTURE_DIR);
+    if (!resolved.startsWith(captureResolved + path.sep) && resolved !== captureResolved) return null;
+    if (!fs.existsSync(resolved)) return null;
+    const img = nativeImage.createFromPath(resolved);
+    const size = img.getSize();
+    if (size.width === 0) return null;
+    const thumbW = 240;
+    const thumbH = Math.round(size.height * (thumbW / size.width));
+    const thumb = img.resize({ width: thumbW, height: thumbH, quality: 'good' });
+    return thumb.toJPEG(70).toString('base64');
+  } catch { return null; }
+});
+
+ipcMain.handle('save-edited-screenshot', async (_e, { base64Data, originalName }) => {
+  try {
+    fs.mkdirSync(CAPTURE_DIR, { recursive: true });
+    const ext = path.extname(originalName) || '.png';
+    const baseName = path.basename(originalName, ext);
+    const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const newName = `${baseName}_edited_${ts}${ext}`;
+    const filePath = path.join(CAPTURE_DIR, newName);
+    const buf = Buffer.from(base64Data, 'base64');
+    fs.writeFileSync(filePath, buf);
+    // Copy metadata from original screenshot to edited file
+    const origMeta = screenshotMeta[path.basename(originalName)];
+    if (origMeta) {
+      screenshotMeta[newName] = { ...origMeta };
+      saveScreenshotMeta();
+    }
+    // Copy to clipboard for instant paste
+    try { clipboard.writeImage(nativeImage.createFromBuffer(buf)); } catch { /* ignore */ }
+    return filePath;
+  } catch { return null; }
+});
+
+ipcMain.handle('delete-screenshot', async (_e, filePath) => {
+  try {
+    const resolved = path.resolve(filePath);
+    const captureResolved = path.resolve(CAPTURE_DIR);
+    if (!resolved.startsWith(captureResolved + path.sep)) return false;
+    if (fs.existsSync(resolved)) {
+      fs.unlinkSync(resolved);
+      // Clean up metadata
+      const fname = path.basename(resolved);
+      if (screenshotMeta[fname]) {
+        delete screenshotMeta[fname];
+        saveScreenshotMeta();
+      }
+      return true;
+    }
+    return false;
+  } catch { return false; }
+});
+
+ipcMain.on('open-screenshots-folder', () => {
+  fs.mkdirSync(CAPTURE_DIR, { recursive: true });
+  shell.openPath(CAPTURE_DIR);
+});
+
 // Custom hotkey rebinding
 ipcMain.on('set-hotkey', (_e, { action, accelerator }) => {
   try {
     if (action === 'settings') {
       const prev = savedSettings && savedSettings.hotkeySettings ? savedSettings.hotkeySettings : 'Alt+0';
-      // Test registration first
-      const ok = globalShortcut.register(accelerator, () => {
-        if (settingsWindow && !settingsWindow.isDestroyed()) settingsWindow.close();
-        else createSettingsWindow();
-      });
-      if (ok) {
-        // Unregister previous only after successful new registration
-        if (accelerator !== prev) {
-          try { globalShortcut.unregister(prev); } catch { /* ignore */ }
-        }
+      // Unregister previous first to avoid conflicts
+      try { globalShortcut.unregister(prev); } catch { /* ignore */ }
+      const ok = globalShortcut.register(accelerator, toggleSettingsWindow);
+      if (!ok) {
+        // Re-register previous if new one failed
+        try { globalShortcut.register(prev, toggleSettingsWindow); } catch { /* ignore */ }
       }
     } else if (action === 'overlay') {
       const prev = savedSettings && savedSettings.hotkeyOverlay ? savedSettings.hotkeyOverlay : 'CommandOrControl+Shift+H';
@@ -1501,6 +1896,14 @@ ipcMain.on('set-hotkey', (_e, { action, accelerator }) => {
     } else if (action === 'recording') {
       const prev = savedSettings && savedSettings.hotkeyRecording ? savedSettings.hotkeyRecording : 'F10';
       const ok = globalShortcut.register(accelerator, toggleRecording);
+      if (ok) {
+        if (accelerator !== prev) {
+          try { globalShortcut.unregister(prev); } catch { /* ignore */ }
+        }
+      }
+    } else if (action === 'quit') {
+      const prev = savedSettings && savedSettings.hotkeyQuit ? savedSettings.hotkeyQuit : 'Alt+F4';
+      const ok = globalShortcut.register(accelerator, () => { app.isQuiting = true; app.quit(); });
       if (ok) {
         if (accelerator !== prev) {
           try { globalShortcut.unregister(prev); } catch { /* ignore */ }
@@ -1564,6 +1967,7 @@ app.on('second-instance', () => {
 app.whenReady().then(() => {
   savedSettings = loadSettings();
   loadGameHistory();
+  loadScreenshotMeta();
   createOverlay();
   startSystemMetrics();
   startRobloxWatcher();
@@ -1607,22 +2011,25 @@ app.whenReady().then(() => {
   let hotkeySettings = savedSettings && savedSettings.hotkeySettings ? savedSettings.hotkeySettings : 'Alt+0';
   if (!isValidAccelerator(hotkeySettings)) hotkeySettings = 'Alt+0';
   let regSettings = false;
-  try {
-    regSettings = globalShortcut.register(hotkeySettings, () => {
-      if (settingsWindow && !settingsWindow.isDestroyed()) {
+  function toggleSettingsWindow() {
+    if (settingsWindow && !settingsWindow.isDestroyed()) {
+      if (settingsWindow.isVisible() && settingsWindow.isFocused()) {
         settingsWindow.close();
       } else {
-        createSettingsWindow();
+        settingsWindow.show();
+        settingsWindow.focus();
       }
-    });
+    } else {
+      createSettingsWindow();
+    }
+  }
+  try {
+    regSettings = globalShortcut.register(hotkeySettings, toggleSettingsWindow);
   } catch { /* invalid accelerator */ }
   if (!regSettings && hotkeySettings !== 'Alt+0') {
     // Fallback to default if custom hotkey failed
     try {
-      globalShortcut.register('Alt+0', () => {
-        if (settingsWindow && !settingsWindow.isDestroyed()) settingsWindow.close();
-        else createSettingsWindow();
-      });
+      globalShortcut.register('Alt+0', toggleSettingsWindow);
     } catch { /* ignore */ }
     console.log('[Hotkey] Settings: failed to register', hotkeySettings, '— using Alt+0');
   }
@@ -1674,7 +2081,21 @@ app.whenReady().then(() => {
     try {
       globalShortcut.register('F10', toggleRecording);
     } catch { /* ignore */ }
-    console.log('[Hotkey] Recording: failed to register', hotkeyRecording, '— using F10');
+    console.log('[Hotkey] Recording: failed to register', hotkeyRecording, '- using F10');
+  }
+
+  // Quit application hotkey (use saved or default)
+  let hotkeyQuit = savedSettings && savedSettings.hotkeyQuit ? savedSettings.hotkeyQuit : 'Alt+F4';
+  if (!isValidAccelerator(hotkeyQuit)) hotkeyQuit = 'Alt+F4';
+  let regQuit = false;
+  try {
+    regQuit = globalShortcut.register(hotkeyQuit, () => { app.isQuiting = true; app.quit(); });
+  } catch { /* invalid accelerator */ }
+  if (!regQuit && hotkeyQuit !== 'Alt+F4') {
+    try {
+      globalShortcut.register('Alt+F4', () => { app.isQuiting = true; app.quit(); });
+    } catch { /* ignore */ }
+    console.log('[Hotkey] Quit: failed to register', hotkeyQuit, '- using Alt+F4');
   }
 });
 
@@ -1686,6 +2107,9 @@ app.on('will-quit', () => {
   if (apiFastInterval) clearInterval(apiFastInterval);
   if (apiServerInterval) clearInterval(apiServerInterval);
   if (apiSlowInterval) clearInterval(apiSlowInterval);
+  // Clean up temp helper files
+  try { fs.unlinkSync(TEMP_FILE); } catch { /* ignore */ }
+  try { fs.unlinkSync(path.join(app.getPath('temp'), 'kairozun_temp_helper.ps1')); } catch { /* ignore */ }
 });
 
 app.on('window-all-closed', (e) => {
