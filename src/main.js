@@ -1282,28 +1282,41 @@ async function takeScreenshot() {
 // ── Screen Recording ────────────────────────────────────────────────
 let isRecording = false;
 
+// Pre-cache screen source ID so recording starts instantly (no freeze)
+let cachedScreenSourceId = null;
+async function refreshScreenSource() {
+  try {
+    const sources = await desktopCapturer.getSources({ types: ['screen'], thumbnailSize: { width: 1, height: 1 } });
+    if (sources.length > 0) cachedScreenSourceId = sources[0].id;
+  } catch { /* ignore */ }
+}
+// Refresh periodically (every 60s) and on app ready
+setInterval(refreshScreenSource, 60000);
+
 async function toggleRecording() {
   if (isRecording) {
-    // Stop recording
     if (overlayWindow && !overlayWindow.isDestroyed()) {
       overlayWindow.webContents.send('stop-recording');
     }
     return;
   }
 
-  // Start recording
   try {
-    const sources = await desktopCapturer.getSources({ types: ['screen'], thumbnailSize: { width: 1, height: 1 } });
-    if (sources.length === 0) return;
+    // Use cached source or fetch (fast path)
+    let sourceId = cachedScreenSourceId;
+    if (!sourceId) {
+      const sources = await desktopCapturer.getSources({ types: ['screen'], thumbnailSize: { width: 1, height: 1 } });
+      if (sources.length === 0) return;
+      sourceId = sources[0].id;
+      cachedScreenSourceId = sourceId;
+    }
 
-    const sourceId = sources[0].id;
     const display = screen.getPrimaryDisplay();
     const { width, height } = display.size;
     const duration = (savedSettings && savedSettings.recordingDuration) || 30;
     const quality = (savedSettings && savedSettings.recordingQuality) || 'high';
     const showOverlay = savedSettings && savedSettings.showOnCapture !== undefined ? savedSettings.showOnCapture : true;
 
-    // Hide overlay if user doesn't want it in recording
     if (!showOverlay && overlayWindow && !overlayWindow.isDestroyed() && !overlayHiddenByUser) {
       overlayWindow.setOpacity(0);
     }
@@ -1962,8 +1975,10 @@ ipcMain.on('save-recording', (_e, buffer) => {
 // Recording state update from overlay renderer
 ipcMain.on('recording-state', (_e, recording) => {
   isRecording = recording;
-  if (!recording && overlayWindow && !overlayWindow.isDestroyed() && !overlayHiddenByUser) {
-    overlayWindow.setOpacity(1);
+  if (!recording && overlayWindow && !overlayWindow.isDestroyed()) {
+    if (!overlayHiddenByUser) overlayWindow.setOpacity(1);
+    // Ensure mouse passthrough is restored after recording
+    overlayWindow.setIgnoreMouseEvents(true, { forward: true });
   }
 });
 
@@ -2002,6 +2017,7 @@ app.whenReady().then(() => {
   createOverlay();
   startSystemMetrics();
   startRobloxWatcher();
+  refreshScreenSource();
 
   // Apply saved settings to overlay after it loads
   if (overlayWindow && savedSettings) {

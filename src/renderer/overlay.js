@@ -480,9 +480,11 @@ function stopRecording() {
 
 // Quality presets: bitrate & fps (optimized for performance)
 const QUALITY_PRESETS = {
+  ultra:  { fps: 60, bitrate: 35_000_000 },
   max:    { fps: 60, bitrate: 20_000_000 },
   high:   { fps: 60, bitrate: 12_000_000 },
   medium: { fps: 30, bitrate: 6_000_000 },
+  low:    { fps: 30, bitrate: 3_000_000 },
 };
 
 window.kairozun.onStartRecording(async ({ sourceId, width, height, duration, quality, showOverlay }) => {
@@ -536,8 +538,13 @@ window.kairozun.onStartRecording(async ({ sourceId, width, height, duration, qua
       stream.getTracks().forEach(t => t.stop());
       clearInterval(recTimerInterval);
       recIndicator.classList.add('hidden');
-      window.kairozun.recordingState(false);
-      window.kairozun.endRecordingFile();
+      // Defer IPC calls to next tick to avoid UI freeze
+      setTimeout(() => {
+        window.kairozun.endRecordingFile();
+        window.kairozun.recordingState(false);
+        // Restore mouse passthrough
+        window.kairozun.setOverlayMouse(true);
+      }, 50);
       mediaRecorder = null;
     };
 
