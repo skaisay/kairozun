@@ -1918,7 +1918,38 @@ ipcMain.on('set-capture-mode', (_e, visible) => {
   // Setting is persisted via updateSettings; used when recording starts
 });
 
-// Save recorded video data from overlay renderer
+// Streaming video recording — write chunks to disk as they arrive (no RAM buildup)
+let recordingStream = null;
+let recordingFilePath = null;
+
+ipcMain.on('recording-start-file', () => {
+  try {
+    fs.mkdirSync(CAPTURE_DIR, { recursive: true });
+    const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    recordingFilePath = path.join(CAPTURE_DIR, `Kairozun_${ts}.webm`);
+    recordingStream = fs.createWriteStream(recordingFilePath);
+  } catch { /* ignore */ }
+});
+
+ipcMain.on('recording-chunk', (_e, buffer) => {
+  try {
+    if (recordingStream && !recordingStream.destroyed) {
+      recordingStream.write(Buffer.from(buffer));
+    }
+  } catch { /* ignore */ }
+});
+
+ipcMain.on('recording-end-file', () => {
+  try {
+    if (recordingStream && !recordingStream.destroyed) {
+      recordingStream.end();
+    }
+  } catch { /* ignore */ }
+  recordingStream = null;
+  recordingFilePath = null;
+});
+
+// Legacy fallback (kept for compatibility)
 ipcMain.on('save-recording', (_e, buffer) => {
   try {
     fs.mkdirSync(CAPTURE_DIR, { recursive: true });

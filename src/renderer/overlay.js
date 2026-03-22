@@ -478,11 +478,11 @@ function stopRecording() {
   }
 }
 
-// Quality presets: bitrate & fps
+// Quality presets: bitrate & fps (optimized for performance)
 const QUALITY_PRESETS = {
-  max:    { fps: 60, bitrate: 50_000_000 },
-  high:   { fps: 60, bitrate: 25_000_000 },
-  medium: { fps: 30, bitrate: 10_000_000 },
+  max:    { fps: 60, bitrate: 20_000_000 },
+  high:   { fps: 60, bitrate: 12_000_000 },
+  medium: { fps: 30, bitrate: 6_000_000 },
 };
 
 window.kairozun.onStartRecording(async ({ sourceId, width, height, duration, quality, showOverlay }) => {
@@ -522,26 +522,26 @@ window.kairozun.onStartRecording(async ({ sourceId, width, height, duration, qua
       videoBitsPerSecond: preset.bitrate,
     });
 
-    mediaRecorder.ondataavailable = (e) => {
-      if (e.data.size > 0) recordedChunks.push(e.data);
+    // Stream chunks to disk immediately — no RAM buildup
+    window.kairozun.startRecordingFile();
+
+    mediaRecorder.ondataavailable = async (e) => {
+      if (e.data.size > 0) {
+        const buf = await e.data.arrayBuffer();
+        window.kairozun.sendRecordingChunk(new Uint8Array(buf));
+      }
     };
 
-    mediaRecorder.onstop = async () => {
+    mediaRecorder.onstop = () => {
       stream.getTracks().forEach(t => t.stop());
       clearInterval(recTimerInterval);
       recIndicator.classList.add('hidden');
       window.kairozun.recordingState(false);
-
-      if (recordedChunks.length > 0) {
-        const blob = new Blob(recordedChunks, { type: 'video/webm' });
-        const arrayBuf = await blob.arrayBuffer();
-        window.kairozun.saveRecording(new Uint8Array(arrayBuf));
-      }
-      recordedChunks = [];
+      window.kairozun.endRecordingFile();
       mediaRecorder = null;
     };
 
-    mediaRecorder.start(1000);
+    mediaRecorder.start(2000);
     recStartTime = Date.now();
     recTimerEl.textContent = '0:00';
     recIndicator.classList.remove('hidden');
