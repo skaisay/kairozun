@@ -33,4 +33,5 @@ contextBridge.exposeInMainWorld('kairozun', {
   deleteScreenshot: (filePath) => ipcRenderer.invoke('delete-screenshot', filePath),
   openScreenshotsFolder: () => ipcRenderer.send('open-screenshots-folder'),
   openCollage: (data) => ipcRenderer.send('open-collage', data),
+  getScreenSourceId: () => ipcRenderer.invoke('get-screen-source-id'),
 });

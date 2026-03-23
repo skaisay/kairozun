@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Kairozun — Roblox Glass Overlay</title>
-  <meta name="description" content="Kairozun is a real-time Roblox overlay with glassmorphism UI, system monitoring, game stats, and draggable HUD panels.">
+  <meta name="description" content="Kairozun is a real-time Roblox overlay with glassmorphism UI, screen recording, photo editor, 100+ game filters, system monitoring, and draggable HUD panels.">
   <link rel="icon" type="image/x-icon" href="https://raw.githubusercontent.com/skaisay/kairozun-site/main/assets/icon.ico">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
@@ -186,7 +186,7 @@
     .hero p {
       font-size: 17px;
       color: var(--text-dim);
-      max-width: 520px;
+      max-width: 540px;
       margin: 0 auto 36px;
       line-height: 1.7;
     }
@@ -494,10 +494,10 @@
     <div class="hero-content fade-up">
       <div class="hero-badge">
         <span class="hero-badge-dot"></span>
-        v2.1.0 — Latest Release
+        v2.4.2 — Latest Release
       </div>
       <h1>Your Roblox<br><span class="gradient">Glass Overlay</span></h1>
-      <p>Real-time game stats, system monitoring, player lookup, and draggable HUD panels — all in a beautiful glassmorphism overlay that never touches Roblox.</p>
+      <p>Real-time game stats, screen recording, photo editor, 100+ game filters, player lookup, friends tracking, and draggable HUD panels — all in a beautiful glassmorphism overlay that never touches Roblox.</p>
       <div class="hero-buttons">
         <a href="https://github.com/skaisay/kairozun-site/releases/latest" class="btn btn-primary">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -513,53 +513,68 @@
       <div class="fade-up" style="text-align:center">
         <div class="section-label">Features</div>
         <h2 class="section-title">Everything you need,<br>nothing you don't</h2>
-        <p class="section-desc" style="margin:0 auto">Lightweight, fast, and packed with useful tools for every Roblox player.</p>
+        <p class="section-desc" style="margin:0 auto">Lightweight, fast, and packed with powerful tools for every Roblox player.</p>
       </div>
       <div class="features-grid">
         <div class="feature-card fade-up">
           <div class="feature-card-icon">📊</div>
           <h3>Real-Time Stats</h3>
-          <p>FPS, ping, CPU & RAM usage updated live with smooth animated bars and instant response.</p>
+          <p>FPS, ping, CPU & RAM usage updated live with smooth animated bars, color-coded status, and CPU temperature.</p>
         </div>
         <div class="feature-card fade-up">
           <div class="feature-card-icon">🎮</div>
           <h3>Game Info</h3>
-          <p>Current game name, player count, likes/dislikes, genre, visits, favorites — all at a glance.</p>
+          <p>Game name, player count, visits, favorites, rating, genre, creator, server region, and session time — all at a glance.</p>
+        </div>
+        <div class="feature-card fade-up">
+          <div class="feature-card-icon">🎬</div>
+          <h3>Screen Recording</h3>
+          <p>Record gameplay with one hotkey. 5 quality presets (Ultra to Low), 5s–15min duration, H.264 hardware encoding, auto-save.</p>
+        </div>
+        <div class="feature-card fade-up">
+          <div class="feature-card-icon">📸</div>
+          <h3>Screenshots & Editor</h3>
+          <p>Capture screenshots, browse gallery, edit with filters, watermarks, stickers, crop, blur — and create multi-photo collages.</p>
+        </div>
+        <div class="feature-card fade-up">
+          <div class="feature-card-icon">🎨</div>
+          <h3>100+ Game Filters</h3>
+          <p>Real-time color overlays — Noir, Vintage, Neon, Cyber, Emerald, Rose, and 90+ more. Zero GPU cost, applied instantly.</p>
         </div>
         <div class="feature-card fade-up">
           <div class="feature-card-icon">👤</div>
           <h3>Account Card</h3>
-          <p>Avatar, display name, friends count, followers, verification badge, and account age.</p>
+          <p>Avatar, display name, friends & followers count, verification badge, account age — always visible in your overlay.</p>
         </div>
         <div class="feature-card fade-up">
           <div class="feature-card-icon">🔍</div>
           <h3>Player Lookup</h3>
-          <p>Search any Roblox player — see their avatar, groups, badges, ban status, and registration date.</p>
+          <p>Search any Roblox player — see avatar, groups, badges, ban status, registration date, and profile description.</p>
+        </div>
+        <div class="feature-card fade-up">
+          <div class="feature-card-icon">👥</div>
+          <h3>Friends & Players</h3>
+          <p>See online friends, server player list with avatars, friend indicators, and real-time presence tracking.</p>
         </div>
         <div class="feature-card fade-up">
           <div class="feature-card-icon">🖥️</div>
           <h3>System Monitor</h3>
-          <p>CPU model, GPU, RAM, disk usage, network interfaces, OS info, and uptime — all in one tab.</p>
+          <p>CPU, GPU, RAM, disk usage per drive, network interfaces, OS info, uptime, and app memory — detailed system tab.</p>
         </div>
         <div class="feature-card fade-up">
           <div class="feature-card-icon">📜</div>
           <h3>Game History</h3>
-          <p>Automatic session tracking with game name, duration, server region, and timestamps.</p>
-        </div>
-        <div class="feature-card fade-up">
-          <div class="feature-card-icon">🌐</div>
-          <h3>Server Details</h3>
-          <p>Server IP, region, session time, place ID, universe ID, and player count on your server.</p>
-        </div>
-        <div class="feature-card fade-up">
-          <div class="feature-card-icon">🎨</div>
-          <h3>Full Customization</h3>
-          <p>Widget scale, panel darkness, overlay opacity, accent colors, and language switching (EN/RU).</p>
+          <p>Automatic session tracking with game name, icon, duration, server region, and timestamps. Last 50 sessions saved.</p>
         </div>
         <div class="feature-card fade-up">
           <div class="feature-card-icon">⌨️</div>
-          <h3>Hotkeys</h3>
-          <p>Global shortcuts to toggle overlay visibility and open settings without leaving your game.</p>
+          <h3>Custom Hotkeys</h3>
+          <p>Rebindable global shortcuts for settings, screenshot, recording, and quit — never leave your game to toggle features.</p>
+        </div>
+        <div class="feature-card fade-up">
+          <div class="feature-card-icon">🎭</div>
+          <h3>Full Customization</h3>
+          <p>Widget scale, panel opacity, 9 accent colors, per-widget toggles, language switching (EN/RU), and more.</p>
         </div>
       </div>
     </div>
@@ -578,11 +593,12 @@
         <div class="feature-text">
           <div class="section-label">Overlay</div>
           <h2 class="section-title">Glass HUD Panels</h2>
-          <p class="section-desc">Draggable frosted glass panels sit on top of Roblox without interfering. FPS, ping, game info, account card — all visible at a glance with smooth glassmorphism design.</p>
+          <p class="section-desc">Draggable frosted glass panels sit on top of Roblox without interfering. FPS, ping, game info, account card, friends list, player list, clock — all visible at a glance with smooth glassmorphism design.</p>
           <div class="feature-tags">
             <span class="feature-tag">Draggable</span>
             <span class="feature-tag">Glassmorphism</span>
             <span class="feature-tag">Always on Top</span>
+            <span class="feature-tag">Scalable Widgets</span>
           </div>
         </div>
         <div class="feature-image">
@@ -593,13 +609,14 @@
       <!-- Row 2 -->
       <div class="feature-row fade-up">
         <div class="feature-text">
-          <div class="section-label">Settings</div>
-          <h2 class="section-title">Full Control Panel</h2>
-          <p class="section-desc">A dedicated settings window with tabs for general, widgets, appearance, Roblox data, system monitor, players, history, and about. Every detail is configurable.</p>
+          <div class="section-label">Capture</div>
+          <h2 class="section-title">Record & Screenshot</h2>
+          <p class="section-desc">Record gameplay in one hotkey — H.264 hardware encoding with 5 quality presets up to Ultra 60 FPS. Take screenshots, edit them with filters, watermarks, stickers, and create collages from your gallery.</p>
           <div class="feature-tags">
-            <span class="feature-tag">Tabbed UI</span>
-            <span class="feature-tag">Live Preview</span>
-            <span class="feature-tag">EN / RU</span>
+            <span class="feature-tag">Screen Recording</span>
+            <span class="feature-tag">Photo Editor</span>
+            <span class="feature-tag">Collage Creator</span>
+            <span class="feature-tag">100+ Filters</span>
           </div>
         </div>
         <div class="feature-image">
@@ -610,13 +627,14 @@
       <!-- Row 3 -->
       <div class="feature-row fade-up">
         <div class="feature-text">
-          <div class="section-label">Roblox Tab</div>
-          <h2 class="section-title">Game & Account Data</h2>
-          <p class="section-desc">See your account info with avatar, game details with player count and ratings, server info with region and IP — all pulled from public Roblox APIs in real time.</p>
+          <div class="section-label">Roblox Data</div>
+          <h2 class="section-title">Game & Account Info</h2>
+          <p class="section-desc">See your account info with avatar, game details with player count and ratings, server info with region and IP, friends online status — all pulled from public Roblox APIs in real time.</p>
           <div class="feature-tags">
             <span class="feature-tag">Public API</span>
             <span class="feature-tag">Auto-Refresh</span>
             <span class="feature-tag">No Login Required</span>
+            <span class="feature-tag">Server Region</span>
           </div>
         </div>
         <div class="feature-image">
@@ -629,7 +647,7 @@
         <div class="feature-text">
           <div class="section-label">Players</div>
           <h2 class="section-title">Player Lookup</h2>
-          <p class="section-desc">Search for any Roblox player by username. View their profile card with avatar, groups, game badges, registration date, and ban status. Search history is saved locally.</p>
+          <p class="section-desc">Search for any Roblox player by username. View their profile card with avatar, groups, badges, registration date, ban status, and description. Search history is saved locally.</p>
           <div class="feature-tags">
             <span class="feature-tag">Search History</span>
             <span class="feature-tag">Profile Card</span>
@@ -646,11 +664,12 @@
         <div class="feature-text">
           <div class="section-label">System</div>
           <h2 class="section-title">System Monitor</h2>
-          <p class="section-desc">Detailed system information: CPU model and load, GPU name and VRAM, RAM breakdown, disk usage per drive, network interfaces, OS version, and system uptime.</p>
+          <p class="section-desc">Detailed system information: CPU model and load with temperature, GPU name and VRAM, RAM breakdown, disk usage per drive, network interfaces, OS version, and system uptime.</p>
           <div class="feature-tags">
             <span class="feature-tag">CPU / GPU</span>
             <span class="feature-tag">RAM / Disk</span>
             <span class="feature-tag">Network</span>
+            <span class="feature-tag">Temperature</span>
           </div>
         </div>
         <div class="feature-image">
@@ -683,8 +702,8 @@
     <div class="container">
       <div class="stats fade-up">
         <div class="stat-card">
-          <div class="stat-value">&lt;3s</div>
-          <div class="stat-label">Data Load Time</div>
+          <div class="stat-value">100+</div>
+          <div class="stat-label">Game Filters</div>
         </div>
         <div class="stat-card">
           <div class="stat-value">0%</div>
@@ -744,7 +763,7 @@
         <div class="hero-buttons" style="justify-content:center">
           <a href="https://github.com/skaisay/kairozun-site/releases/latest" class="btn btn-primary">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Download v2.1.0
+            Download v2.4.2
           </a>
         </div>
       </div>
@@ -758,6 +777,7 @@
         <span class="footer-copy">&copy; 2026 Kairozun</span>
         <div class="footer-links">
           <a href="https://github.com/skaisay/kairozun-site/releases">Releases</a>
+          <a href="https://discord.gg/hR3MHdKAzU">Discord</a>
         </div>
       </div>
     </div>

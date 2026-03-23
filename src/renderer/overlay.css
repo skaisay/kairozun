@@ -20,6 +20,18 @@ body {
   --accent-rgb: 99, 102, 241;
 }
 
+/* ── Fullscreen Game Filter (colored overlay) ─────────────────────── */
+#game-filter {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: -1;
+  pointer-events: none;
+  display: none;
+}
+
 /* ── Liquid Glass Panel ────────────────────────────────────────────── */
 
 .glass-panel {

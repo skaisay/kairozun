@@ -63,6 +63,42 @@ const i18n = {
     qualityHigh: 'High',
     qualityMedium: 'Medium',
     qualityLow: 'Low',
+    gameFilterLabel: 'Game Filter',
+    filterChoose: 'Choose filter',
+    filterNone: 'None', filterGrayscale: 'B&W', filterSepia: 'Sepia',
+    filterWarm: 'Warm', filterCool: 'Cool', filterContrast: 'Contrast',
+    filterBright: 'Bright', filterVintage: 'Vintage', filterSaturate: 'Vivid',
+    filterDim: 'Dim', filterInvert: 'Invert', filterSharpen: 'Sharpen',
+    filterEmerald: 'Emerald', filterRose: 'Rose', filterSunset: 'Sunset',
+    filterCyber: 'Cyber', filterNoir: 'Noir', filterFaded: 'Faded',
+    filterDramatic: 'Dramatic', filterMinimal: 'Minimal', filterArctic: 'Arctic',
+    filterGolden: 'Golden', filterNeon: 'Neon', filterFilm: 'Film',
+    filterPastel: 'Pastel', filterChrome: 'Chrome', filterHaze: 'Haze',
+    filterMidnight: 'Midnight', filterLomo: 'Lomo', filterClarendon: 'Clarendon',
+    filterNashville: 'Nashville', filterInkwell: 'Inkwell', filterPolaroid: 'Polaroid',
+    filterRedtone: 'Red Tone', filterBluetone: 'Blue Tone', filterGreentone: 'Green Tone',
+    filterAmber: 'Amber', filterFrost: 'Frost', filterLavender: 'Lavender',
+    filterCoral: 'Coral', filterOcean: 'Ocean', filterForest: 'Forest',
+    filterSteel: 'Steel', filterCoffee: 'Coffee', filterElectric: 'Electric',
+    filterRuby: 'Ruby', filterSapphire: 'Sapphire', filterToxic: 'Toxic',
+    filterShadow: 'Shadow',
+    filterPeach: 'Peach', filterMint: 'Mint', filterPlum: 'Plum',
+    filterSand: 'Sand', filterSky: 'Sky', filterCherry: 'Cherry',
+    filterLime: 'Lime', filterMauve: 'Mauve', filterSlate: 'Slate',
+    filterIvory: 'Ivory', filterTangerine: 'Tangerine', filterTeal: 'Teal',
+    filterMagenta: 'Magenta', filterHoney: 'Honey', filterDusk: 'Dusk',
+    filterDawn: 'Dawn', filterMoss: 'Moss', filterWine: 'Wine',
+    filterAsh: 'Ash', filterLilac: 'Lilac', filterCopper: 'Copper',
+    filterIce: 'Ice', filterSaffron: 'Saffron', filterIndigo: 'Indigo',
+    filterBlush: 'Blush', filterCharcoal: 'Charcoal', filterPumpkin: 'Pumpkin',
+    filterAqua: 'Aqua', filterCrimson: 'Crimson', filterOlive: 'Olive',
+    filterFlamingo: 'Flamingo', filterStorm: 'Storm', filterBubblegum: 'Bubblegum',
+    filterBronze: 'Bronze', filterSnowfall: 'Snowfall', filterVolcano: 'Volcano',
+    filterMystic: 'Mystic', filterAurora: 'Aurora', filterClay: 'Clay',
+    filterVelvet: 'Velvet', filterFog: 'Fog', filterCandy: 'Candy',
+    filterGraphite: 'Graphite', filterSunflower: 'Sunflower', filterLagoon: 'Lagoon',
+    filterGarnet: 'Garnet', filterPistachio: 'Pistachio', filterObsidian: 'Obsidian',
+    filterPearl: 'Pearl', filterCinnamon: 'Cinnamon', filterTopaz: 'Topaz',
     accountInfo: 'Account',
     currentGame: 'Current Game',
     serverInfo: 'Server',
@@ -216,6 +252,42 @@ const i18n = {
     qualityHigh: 'Высокое',
     qualityMedium: 'Среднее',
     qualityLow: 'Низкое',
+    gameFilterLabel: 'Фильтр игры',
+    filterChoose: 'Выбрать фильтр',
+    filterNone: 'Нет', filterGrayscale: 'Ч/Б', filterSepia: 'Сепия',
+    filterWarm: 'Тёплый', filterCool: 'Холодный', filterContrast: 'Контраст',
+    filterBright: 'Яркий', filterVintage: 'Винтаж', filterSaturate: 'Насыщенный',
+    filterDim: 'Затемнение', filterInvert: 'Инверсия', filterSharpen: 'Резкость',
+    filterEmerald: 'Изумруд', filterRose: 'Роза', filterSunset: 'Закат',
+    filterCyber: 'Кибер', filterNoir: 'Нуар', filterFaded: 'Выцветший',
+    filterDramatic: 'Драма', filterMinimal: 'Минимал', filterArctic: 'Арктика',
+    filterGolden: 'Золотой', filterNeon: 'Неон', filterFilm: 'Плёнка',
+    filterPastel: 'Пастель', filterChrome: 'Хром', filterHaze: 'Дымка',
+    filterMidnight: 'Полночь', filterLomo: 'Ломо', filterClarendon: 'Кларендон',
+    filterNashville: 'Нэшвилл', filterInkwell: 'Тушь', filterPolaroid: 'Полароид',
+    filterRedtone: 'Красный тон', filterBluetone: 'Синий тон', filterGreentone: 'Зелёный тон',
+    filterAmber: 'Янтарь', filterFrost: 'Мороз', filterLavender: 'Лаванда',
+    filterCoral: 'Коралл', filterOcean: 'Океан', filterForest: 'Лес',
+    filterSteel: 'Сталь', filterCoffee: 'Кофе', filterElectric: 'Электрик',
+    filterRuby: 'Рубин', filterSapphire: 'Сапфир', filterToxic: 'Токсик',
+    filterShadow: 'Тень',
+    filterPeach: 'Персик', filterMint: 'Мята', filterPlum: 'Слива',
+    filterSand: 'Песок', filterSky: 'Небо', filterCherry: 'Вишня',
+    filterLime: 'Лайм', filterMauve: 'Мальва', filterSlate: 'Сланец',
+    filterIvory: 'Слоновая кость', filterTangerine: 'Мандарин', filterTeal: 'Бирюза',
+    filterMagenta: 'Маджента', filterHoney: 'Мёд', filterDusk: 'Сумерки',
+    filterDawn: 'Рассвет', filterMoss: 'Мох', filterWine: 'Вино',
+    filterAsh: 'Пепел', filterLilac: 'Сирень', filterCopper: 'Медь',
+    filterIce: 'Лёд', filterSaffron: 'Шафран', filterIndigo: 'Индиго',
+    filterBlush: 'Румянец', filterCharcoal: 'Уголь', filterPumpkin: 'Тыква',
+    filterAqua: 'Аква', filterCrimson: 'Багряный', filterOlive: 'Оливковый',
+    filterFlamingo: 'Фламинго', filterStorm: 'Шторм', filterBubblegum: 'Жвачка',
+    filterBronze: 'Бронза', filterSnowfall: 'Снегопад', filterVolcano: 'Вулкан',
+    filterMystic: 'Мистик', filterAurora: 'Аврора', filterClay: 'Глина',
+    filterVelvet: 'Бархат', filterFog: 'Туман', filterCandy: 'Конфета',
+    filterGraphite: 'Графит', filterSunflower: 'Подсолнух', filterLagoon: 'Лагуна',
+    filterGarnet: 'Гранат', filterPistachio: 'Фисташка', filterObsidian: 'Обсидиан',
+    filterPearl: 'Жемчуг', filterCinnamon: 'Корица', filterTopaz: 'Топаз',
     accountInfo: 'Аккаунт',
     currentGame: 'Текущая игра',
     serverInfo: 'Сервер',
@@ -328,6 +400,8 @@ function applyLang(lang) {
   document.querySelectorAll('.lang-btn').forEach((btn) => {
     btn.classList.toggle('active', btn.dataset.lang === lang);
   });
+  // Rebuild filter panel with translated names
+  if (typeof buildFilterPanel === 'function') buildFilterPanel();
 }
 
 // ── Tab Navigation ───────────────────────────────────────────────────
@@ -385,6 +459,186 @@ const chkFriendsList = document.getElementById('chk-friendslist');
 const chkCapture = document.getElementById('chk-capture');
 const selRecDuration = document.getElementById('sel-rec-duration');
 const selRecQuality = document.getElementById('sel-rec-quality');
+const filterSidePanel = document.getElementById('filter-side-panel');
+const filterSideList = document.getElementById('filter-side-list');
+const filterSideClose = document.getElementById('filter-side-close');
+const btnOpenFilter = document.getElementById('btn-open-filter');
+const filterActiveName = document.getElementById('filter-active-name');
+let selectedGameFilter = 'none';
+
+// ── Filter Side Panel Data ───────────────────────────────────────────
+const GAME_FILTER_COLORS = {
+  none: null,
+  grayscale: 'rgba(100,100,100,0.22)',
+  sepia: 'rgba(180,130,50,0.12)',
+  warm: 'rgba(255,150,40,0.07)',
+  cool: 'rgba(40,110,255,0.07)',
+  contrast: 'rgba(0,0,0,0.10)',
+  bright: 'rgba(255,255,255,0.06)',
+  vintage: 'rgba(160,110,40,0.10)',
+  saturate: 'rgba(255,40,40,0.03)',
+  dim: 'rgba(0,0,0,0.22)',
+  invert: 'rgba(255,255,255,0.18)',
+  sharpen: 'rgba(0,0,0,0.04)',
+  emerald: 'rgba(0,200,100,0.07)',
+  rose: 'rgba(255,60,100,0.06)',
+  sunset: 'rgba(255,80,20,0.09)',
+  cyber: 'rgba(0,255,200,0.05)',
+  noir: 'rgba(0,0,10,0.28)',
+  faded: 'rgba(200,200,210,0.10)',
+  dramatic: 'rgba(20,10,5,0.18)',
+  minimal: 'rgba(210,215,225,0.04)',
+  arctic: 'rgba(120,200,255,0.07)',
+  golden: 'rgba(255,200,50,0.08)',
+  neon: 'rgba(180,0,255,0.05)',
+  film: 'rgba(100,90,70,0.08)',
+  pastel: 'rgba(220,200,255,0.06)',
+  chrome: 'rgba(180,180,200,0.10)',
+  haze: 'rgba(220,220,240,0.10)',
+  midnight: 'rgba(10,10,50,0.22)',
+  lomo: 'rgba(100,50,0,0.10)',
+  clarendon: 'rgba(50,80,180,0.05)',
+  nashville: 'rgba(200,150,80,0.07)',
+  inkwell: 'rgba(50,50,60,0.25)',
+  polaroid: 'rgba(255,240,200,0.07)',
+  redtone: 'rgba(255,30,30,0.07)',
+  bluetone: 'rgba(30,30,255,0.07)',
+  greentone: 'rgba(30,200,30,0.06)',
+  amber: 'rgba(255,180,30,0.08)',
+  frost: 'rgba(160,220,255,0.07)',
+  lavender: 'rgba(150,100,255,0.07)',
+  coral: 'rgba(255,100,80,0.07)',
+  ocean: 'rgba(0,80,180,0.08)',
+  forest: 'rgba(30,100,30,0.08)',
+  steel: 'rgba(120,130,150,0.10)',
+  coffee: 'rgba(100,60,20,0.10)',
+  electric: 'rgba(0,180,255,0.06)',
+  ruby: 'rgba(200,20,60,0.08)',
+  sapphire: 'rgba(20,50,200,0.08)',
+  toxic: 'rgba(0,255,50,0.05)',
+  shadow: 'rgba(0,0,0,0.30)',
+  // ── Additional Filters ─────────────────────────
+  peach: 'rgba(255,180,140,0.08)',
+  mint: 'rgba(100,255,180,0.06)',
+  plum: 'rgba(140,50,160,0.08)',
+  sand: 'rgba(210,180,120,0.08)',
+  sky: 'rgba(100,180,255,0.06)',
+  cherry: 'rgba(220,40,80,0.07)',
+  lime: 'rgba(140,255,40,0.05)',
+  mauve: 'rgba(180,120,200,0.07)',
+  slate: 'rgba(80,90,110,0.12)',
+  ivory: 'rgba(255,250,230,0.06)',
+  tangerine: 'rgba(255,140,20,0.07)',
+  teal: 'rgba(0,160,160,0.07)',
+  magenta: 'rgba(255,0,140,0.05)',
+  honey: 'rgba(255,200,80,0.07)',
+  dusk: 'rgba(60,40,100,0.14)',
+  dawn: 'rgba(255,170,120,0.06)',
+  moss: 'rgba(80,120,50,0.08)',
+  wine: 'rgba(120,20,50,0.10)',
+  ash: 'rgba(140,140,140,0.10)',
+  lilac: 'rgba(200,150,255,0.06)',
+  copper: 'rgba(180,100,40,0.08)',
+  ice: 'rgba(200,240,255,0.06)',
+  saffron: 'rgba(255,180,0,0.07)',
+  indigo: 'rgba(50,0,180,0.07)',
+  blush: 'rgba(255,150,170,0.06)',
+  charcoal: 'rgba(40,40,45,0.18)',
+  pumpkin: 'rgba(255,120,30,0.07)',
+  aqua: 'rgba(0,220,220,0.05)',
+  crimson: 'rgba(180,10,30,0.08)',
+  olive: 'rgba(100,120,40,0.08)',
+  flamingo: 'rgba(255,100,130,0.06)',
+  storm: 'rgba(50,60,80,0.15)',
+  bubblegum: 'rgba(255,100,200,0.05)',
+  bronze: 'rgba(160,100,40,0.09)',
+  snowfall: 'rgba(230,240,255,0.06)',
+  volcano: 'rgba(200,50,0,0.08)',
+  mystic: 'rgba(100,50,180,0.07)',
+  aurora: 'rgba(40,255,160,0.05)',
+  clay: 'rgba(180,120,90,0.08)',
+  velvet: 'rgba(100,20,60,0.10)',
+  fog: 'rgba(180,190,200,0.08)',
+  candy: 'rgba(255,120,200,0.05)',
+  graphite: 'rgba(60,65,70,0.14)',
+  sunflower: 'rgba(255,220,50,0.06)',
+  lagoon: 'rgba(0,140,140,0.07)',
+  garnet: 'rgba(160,30,60,0.08)',
+  pistachio: 'rgba(140,200,80,0.06)',
+  obsidian: 'rgba(10,10,15,0.25)',
+  pearl: 'rgba(240,235,255,0.05)',
+  cinnamon: 'rgba(180,80,20,0.08)',
+  topaz: 'rgba(255,190,80,0.07)',
+};
+
+const FILTER_I18N_KEYS = {
+  none: 'filterNone', grayscale: 'filterGrayscale', sepia: 'filterSepia',
+  warm: 'filterWarm', cool: 'filterCool', contrast: 'filterContrast',
+  bright: 'filterBright', vintage: 'filterVintage', saturate: 'filterSaturate',
+  dim: 'filterDim', invert: 'filterInvert', sharpen: 'filterSharpen',
+  emerald: 'filterEmerald', rose: 'filterRose', sunset: 'filterSunset',
+  cyber: 'filterCyber', noir: 'filterNoir', faded: 'filterFaded',
+  dramatic: 'filterDramatic', minimal: 'filterMinimal', arctic: 'filterArctic',
+  golden: 'filterGolden', neon: 'filterNeon', film: 'filterFilm',
+  pastel: 'filterPastel', chrome: 'filterChrome', haze: 'filterHaze',
+  midnight: 'filterMidnight', lomo: 'filterLomo', clarendon: 'filterClarendon',
+  nashville: 'filterNashville', inkwell: 'filterInkwell', polaroid: 'filterPolaroid',
+  redtone: 'filterRedtone', bluetone: 'filterBluetone', greentone: 'filterGreentone',
+  amber: 'filterAmber', frost: 'filterFrost', lavender: 'filterLavender',
+  coral: 'filterCoral', ocean: 'filterOcean', forest: 'filterForest',
+  steel: 'filterSteel', coffee: 'filterCoffee', electric: 'filterElectric',
+  ruby: 'filterRuby', sapphire: 'filterSapphire', toxic: 'filterToxic',
+  shadow: 'filterShadow',
+  peach: 'filterPeach', mint: 'filterMint', plum: 'filterPlum',
+  sand: 'filterSand', sky: 'filterSky', cherry: 'filterCherry',
+  lime: 'filterLime', mauve: 'filterMauve', slate: 'filterSlate',
+  ivory: 'filterIvory', tangerine: 'filterTangerine', teal: 'filterTeal',
+  magenta: 'filterMagenta', honey: 'filterHoney', dusk: 'filterDusk',
+  dawn: 'filterDawn', moss: 'filterMoss', wine: 'filterWine',
+  ash: 'filterAsh', lilac: 'filterLilac', copper: 'filterCopper',
+  ice: 'filterIce', saffron: 'filterSaffron', indigo: 'filterIndigo',
+  blush: 'filterBlush', charcoal: 'filterCharcoal', pumpkin: 'filterPumpkin',
+  aqua: 'filterAqua', crimson: 'filterCrimson', olive: 'filterOlive',
+  flamingo: 'filterFlamingo', storm: 'filterStorm', bubblegum: 'filterBubblegum',
+  bronze: 'filterBronze', snowfall: 'filterSnowfall', volcano: 'filterVolcano',
+  mystic: 'filterMystic', aurora: 'filterAurora', clay: 'filterClay',
+  velvet: 'filterVelvet', fog: 'filterFog', candy: 'filterCandy',
+  graphite: 'filterGraphite', sunflower: 'filterSunflower', lagoon: 'filterLagoon',
+  garnet: 'filterGarnet', pistachio: 'filterPistachio', obsidian: 'filterObsidian',
+  pearl: 'filterPearl', cinnamon: 'filterCinnamon', topaz: 'filterTopaz',
+};
+
+function buildFilterPanel() {
+  filterSideList.innerHTML = '';
+  const strings = i18n[currentLang] || i18n.en;
+  const keys = Object.keys(GAME_FILTER_COLORS);
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i];
+    const btn = document.createElement('button');
+    btn.className = 'filter-side-btn' + (key === selectedGameFilter ? ' active' : '');
+    btn.dataset.filter = key;
+    const i18nKey = FILTER_I18N_KEYS[key];
+    btn.textContent = (i18nKey && strings[i18nKey]) || key;
+    btn.addEventListener('click', () => {
+      selectedGameFilter = key;
+      filterSideList.querySelectorAll('.filter-side-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      filterActiveName.textContent = btn.textContent;
+      pushSettings();
+    });
+    filterSideList.appendChild(btn);
+  }
+}
+
+// ── Filter Panel Toggle ──────────────────────────────────────────────
+btnOpenFilter.addEventListener('click', () => {
+  filterSidePanel.classList.toggle('hidden');
+});
+filterSideClose.addEventListener('click', () => {
+  filterSidePanel.classList.add('hidden');
+});
+
+buildFilterPanel();
 
 [chkFps, chkPing, chkKill, chkSys, chkAccount, chkFriends, chkFriendsList, chkGame, chkPlayers, chkServer, chkVisits, chkClock, chkGenre, chkRating, chkFavs, chkRegion, chkUptime, chkPlayerList].forEach((el) => el.addEventListener('change', pushSettings));
 
@@ -457,6 +711,7 @@ if (_saved) {
   if (_saved.showOnCapture !== undefined) chkCapture.checked = _saved.showOnCapture;
   if (_saved.recordingDuration !== undefined) selRecDuration.value = String(_saved.recordingDuration);
   if (_saved.recordingQuality !== undefined) selRecQuality.value = _saved.recordingQuality;
+  if (_saved.gameFilter !== undefined) selectedGameFilter = 'none'; // reset each session
   if (_saved.scaleTL !== undefined && scaleTL) scaleTL.value = _saved.scaleTL;
   if (_saved.scaleTR !== undefined && scaleTR) scaleTR.value = _saved.scaleTR;
   if (_saved.scaleBL !== undefined && scaleBL) scaleBL.value = _saved.scaleBL;
@@ -501,6 +756,7 @@ function pushSettings() {
     showOnCapture: chkCapture.checked,
     recordingDuration: parseInt(selRecDuration.value, 10),
     recordingQuality: selRecQuality.value,
+    gameFilter: selectedGameFilter,
     scaleTL: scaleTL ? parseFloat(scaleTL.value) : 1,
     scaleTR: scaleTR ? parseFloat(scaleTR.value) : 1,
     scaleBL: scaleBL ? parseFloat(scaleBL.value) : 1,
@@ -894,9 +1150,6 @@ let recordedAccelerator = null;
 if (_saved && _saved.hotkeySettings) {
   document.getElementById('hotkey-settings').textContent = _saved.hotkeySettings.replace('CommandOrControl', 'Ctrl');
 }
-if (_saved && _saved.hotkeyOverlay) {
-  document.getElementById('hotkey-overlay').textContent = _saved.hotkeyOverlay.replace('CommandOrControl', 'Ctrl');
-}
 if (_saved && _saved.hotkeyScreenshot) {
   document.getElementById('hotkey-screenshot').textContent = _saved.hotkeyScreenshot.replace('CommandOrControl', 'Ctrl');
 }
@@ -990,7 +1243,7 @@ hotkeySaveBtn.addEventListener('click', () => {
     const settingsKey = currentHotkeyAction === 'settings' ? 'hotkeySettings'
       : currentHotkeyAction === 'screenshot' ? 'hotkeyScreenshot'
       : currentHotkeyAction === 'recording' ? 'hotkeyRecording'
-      : currentHotkeyAction === 'quit' ? 'hotkeyQuit' : 'hotkeyOverlay';
+      : 'hotkeyQuit';
     const patch = {};
     patch[settingsKey] = recordedAccelerator;
     window.kairozun.updateSettings(patch);

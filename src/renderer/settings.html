@@ -59,6 +59,15 @@
         </button>
       </nav>
 
+      <!-- ═══ Filter Side Panel ═══ -->
+      <div class="filter-side-panel hidden" id="filter-side-panel">
+        <div class="filter-side-header">
+          <span data-i18n="gameFilterLabel">Game Filter</span>
+          <button class="filter-side-close" id="filter-side-close">&#x2715;</button>
+        </div>
+        <div class="filter-side-body" id="filter-side-list"></div>
+      </div>
+
       <!-- ═══ Content Area ═══ -->
       <div class="content-area">
 
@@ -79,10 +88,6 @@
               <button class="hotkey-btn" id="hotkey-settings" data-action="settings">Alt+0</button>
             </div>
             <div class="info-row">
-              <span class="info-desc" data-i18n="hotkeyOverlay">Show / Hide Overlay</span>
-              <button class="hotkey-btn" id="hotkey-overlay" data-action="overlay">Ctrl+Shift+H</button>
-            </div>
-            <div class="info-row">
               <span class="info-desc" data-i18n="hotkeyScreenshot">Screenshot</span>
               <button class="hotkey-btn" id="hotkey-screenshot" data-action="screenshot">F9</button>
             </div>
@@ -99,7 +104,7 @@
             <label data-i18n="captureSettings">Screen Capture</label>
             <div class="toggle-row">
               <span data-i18n="showOnCapture">Show on screen recording</span>
-              <input type="checkbox" id="chk-capture">
+              <input type="checkbox" id="chk-capture" checked>
             </div>
             <div class="toggle-row">
               <span data-i18n="recordingDuration">Recording duration</span>
@@ -122,6 +127,13 @@
                 <option value="medium" data-i18n-opt="qualityMedium">Medium</option>
                 <option value="low" data-i18n-opt="qualityLow">Low</option>
               </select>
+            </div>
+          </div>
+          <div class="section">
+            <label data-i18n="gameFilterLabel">Game Filter</label>
+            <div class="toggle-row">
+              <span id="filter-active-name" data-i18n="filterNone">None</span>
+              <button class="filter-open-btn" id="btn-open-filter" data-i18n="filterChoose">Choose filter</button>
             </div>
           </div>
         </div>

@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, screen, globalShortcut, Tray, Menu, shell, desktopCapturer, clipboard, nativeImage, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, screen, globalShortcut, Tray, Menu, shell, desktopCapturer, clipboard, nativeImage, dialog, session } = require('electron');
 const path = require('path');
 const os = require('os');
 const fs = require('fs');
@@ -1311,15 +1311,6 @@ async function toggleRecording() {
   }
 
   try {
-    // Use cached source or fetch (fast path)
-    let sourceId = cachedScreenSourceId;
-    if (!sourceId) {
-      const sources = await desktopCapturer.getSources({ types: ['screen'], thumbnailSize: { width: 1, height: 1 } });
-      if (sources.length === 0) return;
-      sourceId = sources[0].id;
-      cachedScreenSourceId = sourceId;
-    }
-
     const display = screen.getPrimaryDisplay();
     const { width, height } = display.size;
     const duration = (savedSettings && savedSettings.recordingDuration) || 30;
@@ -1332,9 +1323,14 @@ async function toggleRecording() {
 
     isRecording = true;
     if (overlayWindow && !overlayWindow.isDestroyed()) {
-      overlayWindow.webContents.send('start-recording', { sourceId, width, height, duration, quality, showOverlay });
+      overlayWindow.webContents.send('start-recording', { width, height, duration, quality, showOverlay });
     }
-  } catch { /* ignore */ }
+  } catch (err) {
+    console.error('[Recording] Failed to start:', err);
+    if (overlayWindow && !overlayWindow.isDestroyed() && !overlayHiddenByUser) {
+      overlayWindow.setOpacity(1);
+    }
+  }
 }
 
 function createSettingsWindow() {
@@ -1576,6 +1572,11 @@ function startSystemMetrics() {
 }
 
 // ── IPC handlers ────────────────────────────────────────────────────
+ipcMain.handle('get-screen-source-id', async () => {
+  if (!cachedScreenSourceId) await refreshScreenSource();
+  return cachedScreenSourceId;
+});
+
 ipcMain.on('update-settings', (_e, settings) => {
   savedSettings = Object.assign(savedSettings || {}, settings);
   saveSettings(savedSettings);
@@ -1898,18 +1899,6 @@ ipcMain.on('set-hotkey', (_e, { action, accelerator }) => {
         // Re-register previous if new one failed
         try { globalShortcut.register(prev, toggleSettingsWindow); } catch { /* ignore */ }
       }
-    } else if (action === 'overlay') {
-      const prev = savedSettings && savedSettings.hotkeyOverlay ? savedSettings.hotkeyOverlay : 'CommandOrControl+Shift+H';
-      const ok = globalShortcut.register(accelerator, () => {
-        if (overlayWindow && !overlayWindow.isDestroyed()) {
-          toggleOverlayVisibility();
-        }
-      });
-      if (ok) {
-        if (accelerator !== prev) {
-          try { globalShortcut.unregister(prev); } catch { /* ignore */ }
-        }
-      }
     } else if (action === 'screenshot') {
       const prev = savedSettings && savedSettings.hotkeyScreenshot ? savedSettings.hotkeyScreenshot : 'F9';
       const ok = globalShortcut.register(accelerator, takeScreenshot);
@@ -1989,12 +1978,12 @@ ipcMain.on('recording-state', (_e, recording) => {
   isRecording = recording;
   if (!recording && overlayWindow && !overlayWindow.isDestroyed()) {
     if (!overlayHiddenByUser) overlayWindow.setOpacity(1);
-    // Always restore mouse passthrough after recording
     setTimeout(() => {
       if (overlayWindow && !overlayWindow.isDestroyed()) {
         overlayWindow.setIgnoreMouseEvents(true, { forward: true });
       }
     }, 100);
+    refreshScreenSource();
   }
 });
 
@@ -2031,6 +2020,31 @@ app.whenReady().then(() => {
   loadGameHistory();
   loadScreenshotMeta();
   createOverlay();
+
+  // Handle getDisplayMedia requests — provide screen source without picker dialog.
+  // Uses cached source for instant response (no getSources lag).
+  session.defaultSession.setDisplayMediaRequestHandler(async (_request, callback) => {
+    try {
+      let source = null;
+      if (cachedScreenSourceId) {
+        source = { id: cachedScreenSourceId, name: 'Screen' };
+      } else {
+        const sources = await desktopCapturer.getSources({ types: ['screen'], thumbnailSize: { width: 1, height: 1 } });
+        if (sources.length > 0) {
+          source = sources[0];
+          cachedScreenSourceId = source.id;
+        }
+      }
+      if (source) {
+        callback({ video: source });
+      } else {
+        callback({});
+      }
+    } catch {
+      callback({});
+    }
+  });
+
   startSystemMetrics();
   startRobloxWatcher();
   refreshScreenSource();
@@ -2095,28 +2109,6 @@ app.whenReady().then(() => {
       globalShortcut.register('Alt+0', toggleSettingsWindow);
     } catch { /* ignore */ }
     console.log('[Hotkey] Settings: failed to register', hotkeySettings, '— using Alt+0');
-  }
-
-  // Ctrl+Shift+H — toggle overlay visibility (use saved or default)
-  let hotkeyOverlay = savedSettings && savedSettings.hotkeyOverlay ? savedSettings.hotkeyOverlay : 'CommandOrControl+Shift+H';
-  if (!isValidAccelerator(hotkeyOverlay)) hotkeyOverlay = 'CommandOrControl+Shift+H';
-  let regOverlay = false;
-  try {
-    regOverlay = globalShortcut.register(hotkeyOverlay, () => {
-      if (overlayWindow && !overlayWindow.isDestroyed()) {
-        toggleOverlayVisibility();
-      }
-    });
-  } catch { /* invalid accelerator */ }
-  if (!regOverlay && hotkeyOverlay !== 'CommandOrControl+Shift+H') {
-    try {
-      globalShortcut.register('CommandOrControl+Shift+H', () => {
-        if (overlayWindow && !overlayWindow.isDestroyed()) {
-          toggleOverlayVisibility();
-        }
-      });
-    } catch { /* ignore */ }
-    console.log('[Hotkey] Overlay: failed to register', hotkeyOverlay, '— using Ctrl+Shift+H');
   }
 
   // F9 — take screenshot (use saved or default)

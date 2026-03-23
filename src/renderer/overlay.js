@@ -9,7 +9,7 @@ const i18n = {
     ping: 'PING',
     friends: 'FR',
     friendsList: 'Friends',
-    hint: 'Alt+0 — Settings  |  Ctrl+Shift+H — Hide',
+    hint: 'Alt+0 — Settings',
     servers: 'SRV',
     players: 'Players',
   },
@@ -18,13 +18,134 @@ const i18n = {
     ping: 'ПИНГ',
     friends: 'ДР',
     friendsList: 'Друзья',
-    hint: 'Alt+0 — Настройки  |  Ctrl+Shift+H — Скрыть',
+    hint: 'Alt+0 — Настройки',
     servers: 'СРВ',
     players: 'Игроки',
   },
 };
 
 let currentLang = 'en';
+
+// ── Game Filters (backdrop-filter applied to full screen) ────────────
+// Game Filters — lightweight colored overlays (no screen capture, zero GPU cost)
+// Each filter is an rgba color applied as a full-screen tint
+const GAME_FILTERS = {
+  none: null,
+  grayscale: 'rgba(100,100,100,0.22)',
+  sepia: 'rgba(180,130,50,0.12)',
+  warm: 'rgba(255,150,40,0.07)',
+  cool: 'rgba(40,110,255,0.07)',
+  contrast: 'rgba(0,0,0,0.10)',
+  bright: 'rgba(255,255,255,0.06)',
+  vintage: 'rgba(160,110,40,0.10)',
+  saturate: 'rgba(255,40,40,0.03)',
+  dim: 'rgba(0,0,0,0.22)',
+  invert: 'rgba(255,255,255,0.18)',
+  sharpen: 'rgba(0,0,0,0.04)',
+  emerald: 'rgba(0,200,100,0.07)',
+  rose: 'rgba(255,60,100,0.06)',
+  sunset: 'rgba(255,80,20,0.09)',
+  cyber: 'rgba(0,255,200,0.05)',
+  noir: 'rgba(0,0,10,0.28)',
+  faded: 'rgba(200,200,210,0.10)',
+  dramatic: 'rgba(20,10,5,0.18)',
+  minimal: 'rgba(210,215,225,0.04)',
+  arctic: 'rgba(120,200,255,0.07)',
+  golden: 'rgba(255,200,50,0.08)',
+  neon: 'rgba(180,0,255,0.05)',
+  film: 'rgba(100,90,70,0.08)',
+  pastel: 'rgba(220,200,255,0.06)',
+  chrome: 'rgba(180,180,200,0.10)',
+  haze: 'rgba(220,220,240,0.10)',
+  midnight: 'rgba(10,10,50,0.22)',
+  lomo: 'rgba(100,50,0,0.10)',
+  clarendon: 'rgba(50,80,180,0.05)',
+  nashville: 'rgba(200,150,80,0.07)',
+  inkwell: 'rgba(50,50,60,0.25)',
+  polaroid: 'rgba(255,240,200,0.07)',
+  redtone: 'rgba(255,30,30,0.07)',
+  bluetone: 'rgba(30,30,255,0.07)',
+  greentone: 'rgba(30,200,30,0.06)',
+  amber: 'rgba(255,180,30,0.08)',
+  frost: 'rgba(160,220,255,0.07)',
+  lavender: 'rgba(150,100,255,0.07)',
+  coral: 'rgba(255,100,80,0.07)',
+  ocean: 'rgba(0,80,180,0.08)',
+  forest: 'rgba(30,100,30,0.08)',
+  steel: 'rgba(120,130,150,0.10)',
+  coffee: 'rgba(100,60,20,0.10)',
+  electric: 'rgba(0,180,255,0.06)',
+  ruby: 'rgba(200,20,60,0.08)',
+  sapphire: 'rgba(20,50,200,0.08)',
+  toxic: 'rgba(0,255,50,0.05)',
+  shadow: 'rgba(0,0,0,0.30)',
+  peach: 'rgba(255,180,140,0.08)',
+  mint: 'rgba(100,255,180,0.06)',
+  plum: 'rgba(140,50,160,0.08)',
+  sand: 'rgba(210,180,120,0.08)',
+  sky: 'rgba(100,180,255,0.06)',
+  cherry: 'rgba(220,40,80,0.07)',
+  lime: 'rgba(140,255,40,0.05)',
+  mauve: 'rgba(180,120,200,0.07)',
+  slate: 'rgba(80,90,110,0.12)',
+  ivory: 'rgba(255,250,230,0.06)',
+  tangerine: 'rgba(255,140,20,0.07)',
+  teal: 'rgba(0,160,160,0.07)',
+  magenta: 'rgba(255,0,140,0.05)',
+  honey: 'rgba(255,200,80,0.07)',
+  dusk: 'rgba(60,40,100,0.14)',
+  dawn: 'rgba(255,170,120,0.06)',
+  moss: 'rgba(80,120,50,0.08)',
+  wine: 'rgba(120,20,50,0.10)',
+  ash: 'rgba(140,140,140,0.10)',
+  lilac: 'rgba(200,150,255,0.06)',
+  copper: 'rgba(180,100,40,0.08)',
+  ice: 'rgba(200,240,255,0.06)',
+  saffron: 'rgba(255,180,0,0.07)',
+  indigo: 'rgba(50,0,180,0.07)',
+  blush: 'rgba(255,150,170,0.06)',
+  charcoal: 'rgba(40,40,45,0.18)',
+  pumpkin: 'rgba(255,120,30,0.07)',
+  aqua: 'rgba(0,220,220,0.05)',
+  crimson: 'rgba(180,10,30,0.08)',
+  olive: 'rgba(100,120,40,0.08)',
+  flamingo: 'rgba(255,100,130,0.06)',
+  storm: 'rgba(50,60,80,0.15)',
+  bubblegum: 'rgba(255,100,200,0.05)',
+  bronze: 'rgba(160,100,40,0.09)',
+  snowfall: 'rgba(230,240,255,0.06)',
+  volcano: 'rgba(200,50,0,0.08)',
+  mystic: 'rgba(100,50,180,0.07)',
+  aurora: 'rgba(40,255,160,0.05)',
+  clay: 'rgba(180,120,90,0.08)',
+  velvet: 'rgba(100,20,60,0.10)',
+  fog: 'rgba(180,190,200,0.08)',
+  candy: 'rgba(255,120,200,0.05)',
+  graphite: 'rgba(60,65,70,0.14)',
+  sunflower: 'rgba(255,220,50,0.06)',
+  lagoon: 'rgba(0,140,140,0.07)',
+  garnet: 'rgba(160,30,60,0.08)',
+  pistachio: 'rgba(140,200,80,0.06)',
+  obsidian: 'rgba(10,10,15,0.25)',
+  pearl: 'rgba(240,235,255,0.05)',
+  cinnamon: 'rgba(180,80,20,0.08)',
+  topaz: 'rgba(255,190,80,0.07)',
+};
+
+const gameFilterEl = document.getElementById('game-filter');
+let currentGameFilter = 'none';
+
+function applyGameFilter(filterName) {
+  currentGameFilter = filterName;
+  const color = GAME_FILTERS[filterName];
+  if (!color) {
+    gameFilterEl.style.display = 'none';
+    gameFilterEl.style.backgroundColor = '';
+  } else {
+    gameFilterEl.style.backgroundColor = color;
+    gameFilterEl.style.display = 'block';
+  }
+}
 
 function applyLang(lang) {
   currentLang = lang;
@@ -33,6 +154,7 @@ function applyLang(lang) {
     const key = el.getAttribute('data-i18n');
     if (strings[key]) el.textContent = strings[key];
   });
+
 }
 
 // ── Elements ─────────────────────────────────────────────────────────
@@ -458,9 +580,9 @@ window.kairozun.onScreenshotTaken(() => {
 
 // ── Screen Recording ────────────────────────────────────────────────
 let mediaRecorder = null;
-let recordedChunks = [];
 let recTimerInterval = null;
 let recStartTime = 0;
+let pendingChunks = 0;
 
 const recIndicator = document.getElementById('rec-indicator');
 const recTimerEl = document.getElementById('rec-timer');
@@ -478,7 +600,7 @@ function stopRecording() {
   }
 }
 
-// Quality presets: bitrate & fps (optimized for performance)
+// Quality presets: bitrate & fps
 const QUALITY_PRESETS = {
   ultra:  { fps: 60, bitrate: 30_000_000 },
   max:    { fps: 60, bitrate: 16_000_000 },
@@ -487,50 +609,25 @@ const QUALITY_PRESETS = {
   low:    { fps: 30, bitrate: 2_500_000 },
 };
 
-window.kairozun.onStartRecording(async ({ sourceId, width, height, duration, quality, showOverlay }) => {
+window.kairozun.onStartRecording(async ({ width, height, duration, quality, showOverlay }) => {
   if (mediaRecorder && mediaRecorder.state !== 'inactive') return;
 
   const preset = QUALITY_PRESETS[quality] || QUALITY_PRESETS.high;
 
-  // Force mouse passthrough immediately so mouse never blocks
   window.kairozun.setOverlayMouse(true);
 
   try {
-    // Capture video stream
-    const videoStream = await navigator.mediaDevices.getUserMedia({
-      audio: false,
+    // Single getDisplayMedia call with audio+video — main process handles
+    // source selection via setDisplayMediaRequestHandler (no picker, no overlay hide)
+    const stream = await navigator.mediaDevices.getDisplayMedia({
       video: {
-        mandatory: {
-          chromeMediaSource: 'desktop',
-          chromeMediaSourceId: sourceId,
-          minWidth: width,
-          maxWidth: width,
-          minHeight: height,
-          maxHeight: height,
-          minFrameRate: preset.fps,
-          maxFrameRate: preset.fps,
-        },
+        width: { ideal: width },
+        height: { ideal: height },
+        frameRate: { ideal: preset.fps },
       },
+      audio: true,
     });
 
-    // Try to capture system audio
-    let combinedStream = videoStream;
-    try {
-      const audioStream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          mandatory: {
-            chromeMediaSource: 'desktop',
-            chromeMediaSourceId: sourceId,
-          },
-        },
-        video: false,
-      });
-      // Merge video + audio tracks
-      const tracks = [...videoStream.getVideoTracks(), ...audioStream.getAudioTracks()];
-      combinedStream = new MediaStream(tracks);
-    } catch { /* audio capture not available — continue without */ }
-
-    // Prefer H264 (hardware-accelerated) over VP8/VP9
     let mimeType = 'video/webm;codecs=h264';
     if (!MediaRecorder.isTypeSupported(mimeType)) {
       mimeType = 'video/webm;codecs=vp8';
@@ -539,51 +636,60 @@ window.kairozun.onStartRecording(async ({ sourceId, width, height, duration, qua
       mimeType = 'video/webm';
     }
 
-    recordedChunks = [];
-    mediaRecorder = new MediaRecorder(combinedStream, {
+    mediaRecorder = new MediaRecorder(stream, {
       mimeType,
       videoBitsPerSecond: preset.bitrate,
     });
 
-    // Stream chunks to disk immediately — no RAM buildup
+    pendingChunks = 0;
     window.kairozun.startRecordingFile();
 
     mediaRecorder.ondataavailable = (e) => {
       if (e.data.size > 0) {
+        pendingChunks++;
         e.data.arrayBuffer().then(buf => {
           window.kairozun.sendRecordingChunk(new Uint8Array(buf));
+          pendingChunks--;
         });
       }
     };
 
+    mediaRecorder.onerror = () => {
+      stopRecording();
+    };
+
     mediaRecorder.onstop = () => {
-      combinedStream.getTracks().forEach(t => t.stop());
+      stream.getTracks().forEach(t => t.stop());
       clearInterval(recTimerInterval);
       recIndicator.classList.add('hidden');
       mediaRecorder = null;
-      // Defer cleanup to avoid UI freeze
-      setTimeout(() => {
+      // Wait for all pending chunks to be written before closing the file
+      const finalize = () => {
+        if (pendingChunks > 0) {
+          setTimeout(finalize, 30);
+          return;
+        }
         window.kairozun.endRecordingFile();
         window.kairozun.recordingState(false);
         window.kairozun.setOverlayMouse(true);
-      }, 50);
+      };
+      finalize();
     };
 
-    // Longer timeslice = fewer IPC calls = less overhead
-    mediaRecorder.start(4000);
+    // 1s timeslice — granular writes, no data loss on stop
+    mediaRecorder.start(1000);
     recStartTime = Date.now();
     recTimerEl.textContent = '0:00';
     recIndicator.classList.remove('hidden');
     window.kairozun.recordingState(true);
-    // Force mouse passthrough again after recording started
     window.kairozun.setOverlayMouse(true);
     recTimerInterval = setInterval(updateRecTimer, 1000);
 
-    // Auto-stop after duration
     setTimeout(() => {
       stopRecording();
     }, duration * 1000);
-  } catch {
+  } catch (err) {
+    console.error('[Recording] Failed to start capture:', err);
     window.kairozun.recordingState(false);
     window.kairozun.setOverlayMouse(true);
   }
@@ -1009,7 +1115,10 @@ window.kairozun.onApplySettings((settings) => {
   }
   if (settings.showFriendsList !== undefined) {
     widgetToggles.showFriendsList = settings.showFriendsList;
-    document.getElementById('panel-mr').classList.toggle('panel-hidden', !settings.showFriendsList);
+    // Don't directly show panel-mr — let renderFriendsList decide based on online friends count
+    if (!settings.showFriendsList) {
+      document.getElementById('panel-mr').classList.add('panel-hidden');
+    }
   }
   if (settings.showClock !== undefined) {
     document.getElementById('panel-br').classList.toggle('panel-hidden', !settings.showClock);
@@ -1041,6 +1150,11 @@ window.kairozun.onApplySettings((settings) => {
     applyAccentColor(settings.accentColor);
   }
 
+  // Game filter
+  if (settings.gameFilter !== undefined) {
+    applyGameFilter(settings.gameFilter);
+  }
+
   checkPanelVisibility();
 });
 
@@ -1057,6 +1171,7 @@ if (_initSettings) {
   if (_initSettings.accentColor) {
     applyAccentColor(_initSettings.accentColor);
   }
+  // Don't apply saved gameFilter on startup — user must enable explicitly each session
 }
 
 // ── Clock & Session Timer ────────────────────────────────────────────
